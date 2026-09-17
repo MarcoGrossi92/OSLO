@@ -475,7 +475,7 @@ Tloop: DO WHILE ( (Tfinal-T)*Tdirection - Roundoff > ZERO )
 !~~~>  Compute E = 1/(h*gamma)-Jac and its LU decomposition
       IF ( .NOT.SkipLU ) THEN ! This time around skip the Jac update and LU
          CALL SDIRK_PrepareMatrix ( N, H, T, Y,  &
-                   SkipJac, SkipLU,  Reject, IER )
+                   SkipJac, SkipLU,  Reject, IER, FUN )
          IF (IER /= 0) THEN
              CALL SDIRK_ErrorMsg(-8,T,H,Ierr); RETURN
          END IF
@@ -736,7 +736,7 @@ accept: IF ( Err < ONE ) THEN !~~~> Step is accepted
       
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       SUBROUTINE SDIRK_PrepareMatrix ( N, H, T, Y,  &
-                   SkipJac, SkipLU, Reject, ISING )
+                   SkipJac, SkipLU, Reject, ISING, FUN )
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 !~~~>  Compute the matrix E = 1/(H*GAMMA)*Jac, and its decomposition
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -748,6 +748,7 @@ accept: IF ( Err < ONE ) THEN !~~~> Step is accepted
       DOUBLE PRECISION, INTENT(IN)    :: T, Y(N)
       LOGICAL, INTENT(INOUT)       :: SkipJac,SkipLU,Reject
       INTEGER, INTENT(OUT)         :: ISING
+      EXTERNAL ::FUN
 
       DOUBLE PRECISION             :: HGammaInv
       INTEGER                      :: ConsecutiveSng
