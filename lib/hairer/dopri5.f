@@ -369,6 +369,11 @@ C ----------------------------------------------------------
       LOGICAL REJECT,LAST 
       EXTERNAL FCN
       COMMON /CONDO5/XOLD,HOUT
+C     OSlo: the COMMON block is shared by every thread of an OpenMP caller
+C     (IGLOO integrates parcels concurrently); XOLD is kept there for
+C     CONTD5 (dense output) only, and SOLOUT receives the thread-private
+C     copy XOLDS so the previous grid point it sees is its own.
+      DOUBLE PRECISION XOLDS
 C *** *** *** *** *** *** ***
 C  INITIALISATIONS
 C *** *** *** *** *** *** *** 
@@ -395,10 +400,11 @@ C --- INITIAL PREPARATIONS
       NFCN=NFCN+2
       REJECT=.FALSE.
       XOLD=X
+      XOLDS=X
       IF (IOUT.NE.0) THEN 
           IRTRN=1
           HOUT=H
-          CALL SOLOUT(NACCPT+1,XOLD,X,Y,N,IRTRN)
+          CALL SOLOUT(NACCPT+1,XOLDS,X,Y,N,IRTRN)
           IF (IRTRN.LT.0) GOTO 79
       ELSE
           IRTRN=0
@@ -506,13 +512,14 @@ C ------- STIFFNESS DETECTION
          K1(I)=K2(I)
   44     Y(I)=Y1(I)
          XOLD=X
+         XOLDS=X
          X=XPH
          IF (IOUT.NE.0) THEN
             HOUT=H
 C           OSlo: SOLOUT is the 6-argument solout_if (interface_definitions),
 C           as at the first call above; the original 11-argument call put
 C           IRTRN in CONT(1), so a caller's interrupt was never seen.
-            CALL SOLOUT(NACCPT+1,XOLD,X,Y,N,IRTRN)
+            CALL SOLOUT(NACCPT+1,XOLDS,X,Y,N,IRTRN)
             IF (IRTRN.LT.0) GOTO 79
          END IF 
 C ------- NORMAL EXIT
