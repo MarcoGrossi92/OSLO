@@ -27,6 +27,14 @@ function(link_oslo_dependencies target)
 
   target_compile_definitions(${target} PRIVATE FULL_ALGEBRA)
 
+  # The solvers are called from inside the caller's OpenMP parallel regions.
+  # Without the OpenMP flag ifx allocates fixed-size local arrays statically,
+  # i.e. shared by all threads, and the COMMON-block THREADPRIVATE directives
+  # in the Hairer sources are ignored.
+  if (USE_OPENMP)
+    target_link_libraries(${target} PUBLIC OpenMP::OpenMP_Fortran)
+  endif()
+
   # ------------------------------
   # LINKING
   # ------------------------------

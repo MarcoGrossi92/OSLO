@@ -1148,6 +1148,7 @@ C ----------------------------------------------------------
       IMPLICIT DOUBLE PRECISION (A-H,O-Z)
       DIMENSION CONT(LRC)
       COMMON /CONRA5/NN,NN2,NN3,NN4,XSOL,HSOL,C2M1,C1M1
+!$OMP THREADPRIVATE(/CONRA5/)
       S=(X-XSOL)/HSOL
       CONTR5=CONT(I)+S*(CONT(I+NN)+(S-C2M1)*(CONT(I+NN2)
      &     +(S-C1M1)*CONT(I+NN3)))

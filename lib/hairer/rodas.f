@@ -551,7 +551,9 @@ C ----------------------------------------------------------
       INTEGER IP(NM1), IPHES(N)
       LOGICAL REJECT,AUTNMS,IMPLCT,BANDED,LAST,PRED
       COMMON/LINAL/MLE,MUE,MBJAC,MBB,MDIAG,MDIFF,MBDIAG
+!$OMP THREADPRIVATE(/LINAL/)
       COMMON /CONROS/XOLD,HOUT,NN
+!$OMP THREADPRIVATE(/CONROS/)
 C *** *** *** *** *** *** ***
 C  INITIALISATIONS
 C *** *** *** *** *** *** ***    
@@ -889,6 +891,7 @@ C ----------------------------------------------------------
       IMPLICIT DOUBLE PRECISION (A-H,O-Z)
       DIMENSION CONT(LRC)
       COMMON /CONROS/XOLD,H,N
+!$OMP THREADPRIVATE(/CONROS/)
       S=(X-XOLD)/H 
       CONTRO=CONT(I)*(1-S)+S*(CONT(I+N)+(1-S)*(CONT(I+N*2)
      &      +S*CONT(I+N*3)))

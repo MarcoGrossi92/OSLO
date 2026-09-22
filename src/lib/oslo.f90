@@ -123,11 +123,29 @@ module oslo
   integer, parameter :: NIOPT=3
   integer, allocatable :: IWORK_global(:)
   integer :: ITOL
-  integer :: MLJAC, MUJAC, MUMAS, MLMAS, IMAS
   integer :: LWORK, LIWORK
   integer :: LRCONT     ! see sdirk4.f
   integer :: NSMAX      ! see radau.f
   integer, parameter :: NNZERO=19 ! see FATODE
+
+# if defined(SUNDIALS)
+  !> Per-call context handed to CVODE as user_data. The RHS callback reads fcn
+  !> and neq from here instead of through host association, so concurrent calls
+  !> (one per OpenMP thread) never see each other's state.
+  abstract interface
+    subroutine cvode_fcn_if(n, t, y, f)
+      import :: R8
+      integer,  intent(in)  :: n
+      real(R8), intent(in)  :: t
+      real(R8), intent(in)  :: y(n)
+      real(R8), intent(out) :: f(n)
+    end subroutine cvode_fcn_if
+  end interface
+  type :: cvode_ctx_t
+    procedure(cvode_fcn_if), pointer, nopass :: fcn => null()
+    integer :: neq = 0
+  end type cvode_ctx_t
+# endif
 
 contains
 
@@ -265,7 +283,7 @@ contains
 # if defined(INTEL)
 !> `jac`/`IJAC` are inert here: using them means switching from dodesol_mk52lfn
 !> to the analytic-Jacobian entry point dodesol_mk52lfa, a different call.
-subroutine wrap_dodesol(n,t1,t2,var,fcn,jac,IJAC,ierr,hmax,solout)
+recursive subroutine wrap_dodesol(n,t1,t2,var,fcn,jac,IJAC,ierr,hmax,solout)
   use interface_definitions, only : solout_if, jac_if
   implicit none
   integer, intent(in)            :: n
@@ -297,7 +315,7 @@ end subroutine wrap_dodesol
 # endif
 
 
-subroutine wrap_sdirk4(n,t1,t2,var,fcn,jac,IJAC,IDID,hmax,solout)
+recursive subroutine wrap_sdirk4(n,t1,t2,var,fcn,jac,IJAC,IDID,hmax,solout)
   use interface_definitions, only : solout_if, jac_if
   implicit none
   integer, intent(in)            :: n
@@ -311,6 +329,7 @@ subroutine wrap_sdirk4(n,t1,t2,var,fcn,jac,IJAC,IDID,hmax,solout)
   external :: fcn
   ! specific
   external :: SDIRK4
+  integer :: MLJAC, MUJAC, MLMAS, MUMAS, IMAS
   real(R8) :: h
   real(R8) :: WORK(LWORK)
   integer :: IWORK(LIWORK)
@@ -360,7 +379,7 @@ subroutine wrap_sdirk4(n,t1,t2,var,fcn,jac,IJAC,IDID,hmax,solout)
 end subroutine wrap_sdirk4
 
 
-subroutine wrap_radau5(n,t1,t2,var,fcn,jac,IJAC,IDID,hmax,solout)
+recursive subroutine wrap_radau5(n,t1,t2,var,fcn,jac,IJAC,IDID,hmax,solout)
   use interface_definitions, only : solout_if, jac_if
   implicit none
   integer, intent(in)            :: n
@@ -374,6 +393,7 @@ subroutine wrap_radau5(n,t1,t2,var,fcn,jac,IJAC,IDID,hmax,solout)
   external :: fcn
   ! specific
   external :: RADAU5
+  integer :: MLJAC, MUJAC, MLMAS, MUMAS, IMAS
   real(R8) :: h
   real(R8) :: WORK(LWORK)
   integer :: IWORK(LIWORK)
@@ -416,7 +436,7 @@ subroutine wrap_radau5(n,t1,t2,var,fcn,jac,IJAC,IDID,hmax,solout)
 end subroutine wrap_radau5
 
 
-subroutine wrap_rodas(n,t1,t2,var,fcn,jac,IJAC,IDID,hmax,solout)
+recursive subroutine wrap_rodas(n,t1,t2,var,fcn,jac,IJAC,IDID,hmax,solout)
   use interface_definitions, only : solout_if, jac_if
   implicit none
   integer, intent(in)            :: n
@@ -430,11 +450,12 @@ subroutine wrap_rodas(n,t1,t2,var,fcn,jac,IJAC,IDID,hmax,solout)
   external :: fcn
   ! specific
   external :: RODAS
+  integer :: MLJAC, MUJAC, MLMAS, MUMAS, IMAS
   real(R8) :: h
   real(R8) :: WORK(LWORK)
   integer :: IWORK(LIWORK)
-  real(R8) :: RPAR(1)=0d0
-  integer :: IPAR(1)=0
+  real(R8) :: RPAR(1)
+  integer :: IPAR(1)
   integer :: IFCN, IDFX, IOUT
 
   h = 0.D0
@@ -446,6 +467,8 @@ subroutine wrap_rodas(n,t1,t2,var,fcn,jac,IJAC,IDID,hmax,solout)
   MUJAC = 0
   MUMAS = 0
   IOUT = 0
+  RPAR = 0d0
+  IPAR = 0
   
   IWORK = IWORK_global
   WORK = 0d0
@@ -463,7 +486,7 @@ end subroutine wrap_rodas
 
 
 !> `jac`/`IJAC` are inert here: DOPRI5 is explicit and never forms a Jacobian.
-subroutine wrap_dopri5(n,t1,t2,var,fcn,jac,IJAC,IDID,hmax,solout)
+recursive subroutine wrap_dopri5(n,t1,t2,var,fcn,jac,IJAC,IDID,hmax,solout)
   use interface_definitions, only : solout_if, jac_if
   implicit none
   integer, intent(in)            :: n
@@ -501,7 +524,7 @@ end subroutine wrap_dopri5
 
 !> `jac`/`IJAC` are inert here: FATODE declares its Jacobian callback as
 !> JAC(T,Y,Jac0), which is not Hairer's signature, so it cannot be forwarded.
-subroutine wrap_sdirk_FATODE(n,t1,t2,var,fcn,jac,IJAC,err,hmax,solout)
+recursive subroutine wrap_sdirk_FATODE(n,t1,t2,var,fcn,jac,IJAC,err,hmax,solout)
   use SDIRK_f90_Integrator
   use interface_definitions, only : solout_if, jac_if
   implicit none
@@ -530,7 +553,7 @@ end subroutine wrap_sdirk_FATODE
 
 
 !> `jac`/`IJAC` are inert here -- see wrap_sdirk_FATODE.
-subroutine wrap_ros_FATODE(n,t1,t2,var,fcn,jac,IJAC,err,hmax,solout)
+recursive subroutine wrap_ros_FATODE(n,t1,t2,var,fcn,jac,IJAC,err,hmax,solout)
   use ROS_f90_Integrator, only: Rosenbrock
   use interface_definitions, only : solout_if, jac_if
   implicit none
@@ -562,7 +585,7 @@ end subroutine wrap_ros_FATODE
 
 
 !> `jac`/`IJAC` are inert here -- see wrap_sdirk_FATODE.
-subroutine wrap_rk_FATODE(n,t1,t2,var,fcn,jac,IJAC,err,hmax,solout)
+recursive subroutine wrap_rk_FATODE(n,t1,t2,var,fcn,jac,IJAC,err,hmax,solout)
   use RK_f90_Integrator
   use interface_definitions, only : solout_if, jac_if
   implicit none
@@ -591,7 +614,7 @@ end subroutine wrap_rk_FATODE
 # if defined(SUNDIALS)
 !> `jac`/`IJAC` are inert here: CVODES takes its Jacobian through FCVodeSetJacFn
 !> as a C-interoperable callback, not through the argument list.
-subroutine wrap_cvode(n,t1,t2,var,fcn,jac,IJAC,err,hmax,solout)
+recursive subroutine wrap_cvode(n,t1,t2,var,fcn,jac,IJAC,err,hmax,solout)
   use, intrinsic :: iso_c_binding
   use fsundials_core_mod
   use fcvodes_mod                   ! Fortran interface to CVODES
@@ -619,6 +642,7 @@ subroutine wrap_cvode(n,t1,t2,var,fcn,jac,IJAC,err,hmax,solout)
   type(SUNNonLinearSolver), pointer :: sunnonlin_NLS ! sundials nonlinear solver
   type(c_ptr)                       :: cvode_mem     ! CVode memory
   type(c_ptr)                       :: sunctx        ! SUNDIALS simulation context
+  type(cvode_ctx_t), target         :: ctx           ! RHS context, see cvode_rhs
   real(R8)                          :: fval(n), tret(1)
   integer(c_int)                    :: retval
   integer(c_int64_t)                :: neq
@@ -632,8 +656,12 @@ subroutine wrap_cvode(n,t1,t2,var,fcn,jac,IJAC,err,hmax,solout)
   sunvec_av => FN_VMake_Serial(neq, ATOL, sunctx)
 
   ! Call FCVodeCreate and FCVodeInit to create and initialize CVode memory
+  ctx%fcn => fcn
+  ctx%neq = n
+
   cvode_mem = FCVodeCreate(CV_BDF, sunctx)
-  retval = FCVodeInit(cvode_mem, c_funloc(cvodefcn), t1, sunvec_y)
+  retval = FCVodeInit(cvode_mem, c_funloc(cvode_rhs), t1, sunvec_y)
+  retval = FCVodeSetUserData(cvode_mem, c_loc(ctx))
 
   ! Set tolerances and maxstep
   retval = FCVodeSVtolerances(cvode_mem, RTOL(1), sunvec_av)
@@ -654,54 +682,26 @@ subroutine wrap_cvode(n,t1,t2,var,fcn,jac,IJAC,err,hmax,solout)
   if (present(hmax)) &
     retval =  FCVodeSetMaxStep(cvode_mem, hmax)
 
+  ! A STOP here would kill the whole run from inside the caller's parallel
+  ! region: hand the CVODE status back instead (negative = failure).
   retval = FCVode(cvode_mem, t2, sunvec_y, tret(1), CV_NORMAL)
-  if (retval /= CV_SUCCESS) then
-    write(*,*) 'Error in FCVode, retval = ', retval, '; halting'
-    stop 1
-  end if
+  err = int(retval)
 
   !call PrintFinalStats(cvode_mem)
 
-  ! free memory
+  ! free memory (this runs once per call, so anything left here leaks per cell)
   call FCVodeFree(cvode_mem)
+  retval = FSUNNonlinSolFree(sunnonlin_NLS)
   retval = FSUNLinSolFree(sunlinsol_LS)
   call FSUNMatDestroy(sunmat_A)
   call FN_VDestroy(sunvec_y)
+  call FN_VDestroy(sunvec_f)
   call FN_VDestroy(sunvec_av)
   retval = FSUNContext_Free(sunctx)
-
-  err = retval
 
 
 contains
 
-  ! ----------------------------------------------------------------
-  ! cvodefcn: The CVODE RHS operator function
-  ! ----------------------------------------------------------------
-  integer(c_int) function cvodefcn(t, sunvec_y, sunvec_f, user_data) result(ierr) bind(C)
-    use, intrinsic :: iso_c_binding
-    use fsundials_core_mod
-    use fnvector_serial_mod           ! Fortran interface to serial N_Vector
-    use fsunmatrix_dense_mod          ! Fortran interface to dense SUNMatrix
-    implicit none
-    real(c_double), value :: t         ! current time
-    type(N_Vector)        :: sunvec_y  ! solution N_Vector
-    type(N_Vector)        :: sunvec_f  ! function N_Vector
-    type(c_ptr), value :: user_data ! user-defined data
-    ! pointers to data in SUNDIALS vectors
-    real(c_double), pointer, dimension(neq) :: yval(:)
-    real(c_double), pointer, dimension(neq) :: fval(:)
-
-    ! get data arrays from SUNDIALS vectors
-    yval => FN_VGetArrayPointer(sunvec_y)
-    fval => FN_VGetArrayPointer(sunvec_f)
-
-    call fcn(NEQ,t,yval,fval)
-    ierr = 0
-    if (all(fval==-1.0d0)) ierr = 1
-
-  end function cvodefcn
-  ! ----------------------------------------------------------------
 
   ! ----------------------------------------------------------------
   ! PrintFinalStats
@@ -796,6 +796,36 @@ contains
   end subroutine PrintFinalStats
 
 end subroutine wrap_cvode
+
+
+!> CVODE RHS callback. It is a module procedure (not internal to wrap_cvode) and
+!> takes everything it needs from user_data, so it is reentrant: a C function
+!> pointer to an internal procedure carries its host link through a trampoline,
+!> which breaks when several threads integrate at once.
+recursive integer(c_int) function cvode_rhs(t, sunvec_y, sunvec_f, user_data) result(ierr) bind(C)
+  use, intrinsic :: iso_c_binding
+  use fsundials_core_mod
+  use fnvector_serial_mod
+  implicit none
+  real(c_double), value :: t         ! current time
+  type(N_Vector)        :: sunvec_y  ! solution N_Vector
+  type(N_Vector)        :: sunvec_f  ! function N_Vector
+  type(c_ptr), value    :: user_data ! cvode_ctx_t of the calling wrap_cvode
+  type(cvode_ctx_t), pointer :: ctx
+  real(c_double), pointer :: yval(:), fval(:)
+  real(R8) :: tloc
+
+  call c_f_pointer(user_data, ctx)
+  yval => FN_VGetArrayPointer(sunvec_y)
+  fval => FN_VGetArrayPointer(sunvec_f)
+
+  tloc = t
+  call ctx%fcn(ctx%neq, tloc, yval, fval)
+  ! fcn flags an out-of-range state by returning -1 everywhere: recoverable error
+  ierr = 0
+  if (all(fval == -1.0d0)) ierr = 1
+
+end function cvode_rhs
 # endif
 
 

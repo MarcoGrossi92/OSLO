@@ -53,8 +53,22 @@ if (USE_SUNDIALS)
   endif()
   # Check if already installed
   set(SUNDIALS_CONFIG_FILE "${SUNDIALS_INSTALL_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/sundials/SUNDIALSConfig.cmake")
-  if(NOT EXISTS "${SUNDIALS_CONFIG_FILE}")
-    message(STATUS "SUNDIALS not installed, building and installing it...")
+  # The SUNDIALS Fortran interface modules are called from inside the caller's
+  # OpenMP parallel regions: build them with the OpenMP flag, otherwise ifx makes
+  # their derived-type locals (the c_ptr argument wrappers) static and shared by
+  # all threads. The flags are stamped into the install so that an install built
+  # with different flags is rebuilt.
+  set(SUNDIALS_Fortran_FLAGS "")
+  if (USE_OPENMP)
+    set(SUNDIALS_Fortran_FLAGS "${OpenMP_Fortran_FLAGS}")
+  endif()
+  set(SUNDIALS_FLAGS_STAMP "${SUNDIALS_INSTALL_DIR}/oslo-fortran-flags.txt")
+  set(SUNDIALS_INSTALLED_FLAGS "<none>")
+  if(EXISTS "${SUNDIALS_FLAGS_STAMP}")
+    file(READ "${SUNDIALS_FLAGS_STAMP}" SUNDIALS_INSTALLED_FLAGS)
+  endif()
+  if(NOT EXISTS "${SUNDIALS_CONFIG_FILE}" OR NOT SUNDIALS_INSTALLED_FLAGS STREQUAL SUNDIALS_Fortran_FLAGS)
+    message(STATUS "SUNDIALS not installed (or built with other Fortran flags), building and installing it...")
 
     # Build SUNDIALS in a temporary build directory
     execute_process(COMMAND ${CMAKE_COMMAND} -S ${CMAKE_CURRENT_SOURCE_DIR}/lib/sundials
@@ -70,6 +84,7 @@ if (USE_SUNDIALS)
                                           -DEXAMPLES_ENABLE_F2003=OFF
                                           -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
                                           -DCMAKE_Fortran_COMPILER=${CMAKE_Fortran_COMPILER}
+                                          -DCMAKE_Fortran_FLAGS=${SUNDIALS_Fortran_FLAGS}
                                           RESULT_VARIABLE CONFIGURE_RESULT)
     if(NOT CONFIGURE_RESULT EQUAL 0)
       message(FATAL_ERROR "Failed to configure SUNDIALS")
@@ -80,6 +95,7 @@ if (USE_SUNDIALS)
     if(NOT BUILD_RESULT EQUAL 0)
       message(FATAL_ERROR "Failed to build and install SUNDIALS")
     endif()
+    file(WRITE "${SUNDIALS_FLAGS_STAMP}" "${SUNDIALS_Fortran_FLAGS}")
   endif()
   find_package(SUNDIALS REQUIRED PATHS ${SUNDIALS_INSTALL_DIR} NO_DEFAULT_PATH)
   add_compile_definitions(SUNDIALS)

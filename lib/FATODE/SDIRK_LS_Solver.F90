@@ -3,6 +3,9 @@ module ls_solver_sdirk
       implicit none
       save
       integer :: nvar
+      ! Set by lss_init on every SDIRK call, which runs inside the caller's
+      ! OpenMP parallel regions: one copy per thread.
+!$omp threadprivate(nvar)
       type LSdata
         double precision, allocatable :: fjac(:,:),e(:,:)
         integer, allocatable :: ip(:)
