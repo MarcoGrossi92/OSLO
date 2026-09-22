@@ -574,7 +574,7 @@ Tloop: DO WHILE ( (Tend-T)*Tdirection - Roundoff > ZERO )
 NewtonLoop:DO  NewtonIter = 1, NewtonMaxit
  
             !~~~> Prepare the right-hand side
-            CALL RK_PrepareRHS(NV,T,H,Y,F0,Z1,Z2,Z3,DZ1,DZ2,DZ3)
+            CALL RK_PrepareRHS(NV,T,H,Y,F0,Z1,Z2,Z3,DZ1,DZ2,DZ3,FUN)
             
             !~~~> Solve the linear systems
             CALL RK_Solve( NV,H,DZ1,DZ2,DZ3,ISING )
@@ -724,7 +724,7 @@ SDNewtonLoop:DO NewtonIter = 1, NewtonMaxit
          Err = RK_ErrorNorm(NV,SCAL,DZ4)
       ELSE
          CALL  RK_ErrorEstimate(NV,H,T,Y,F0, &
-               Z1,Z2,Z3,SCAL,Err,FirstStep,Reject)
+               Z1,Z2,Z3,SCAL,Err,FirstStep,Reject,FUN)
       END IF
 
 !~~~> Computation of new step size Hnew
@@ -929,7 +929,7 @@ accept:IF (Err < ONE) THEN !~~~> STEP IS ACCEPTED
 
 
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-   SUBROUTINE RK_PrepareRHS(N,T,H,Y,F0,Z1,Z2,Z3,R1,R2,R3)
+   SUBROUTINE RK_PrepareRHS(N,T,H,Y,F0,Z1,Z2,Z3,R1,R2,R3,FUN)
 !~~~> Prepare the right-hand side for Newton iterations
 !     R = Z - hA x F
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -938,6 +938,7 @@ accept:IF (Err < ONE) THEN !~~~> STEP IS ACCEPTED
       INTEGER :: N
       DOUBLE PRECISION :: T, H
       DOUBLE PRECISION, DIMENSION(N) :: Y,Z1,Z2,Z3,F0,F,R1,R2,R3,TMP
+      EXTERNAL ::FUN
 
       CALL DCOPY(N,Z1,1,R1,1) ! R1 <- Z1
       CALL DCOPY(N,Z2,1,R2,1) ! R2 <- Z2
@@ -1041,7 +1042,7 @@ accept:IF (Err < ONE) THEN !~~~> STEP IS ACCEPTED
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    SUBROUTINE RK_ErrorEstimate(N,H,T,Y,F0,   &
                Z1,Z2,Z3,SCAL,Err,     &
-               FirstStep,Reject)
+               FirstStep,Reject,FUN)
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       USE LS_Solver_RK
       IMPLICIT NONE
@@ -1057,6 +1058,7 @@ accept:IF (Err < ONE) THEN !~~~> STEP IS ACCEPTED
       INTEGER :: i
       LOGICAL FirstStep,Reject
       DOUBLE PRECISION :: HrkE1,HrkE2,HrkE3,Err
+      EXTERNAL ::FUN
 
       HrkE1  = rkE(1)/H
       HrkE2  = rkE(2)/H

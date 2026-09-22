@@ -370,6 +370,11 @@ C ----------------------------------------------------------
       EXTERNAL FCN
       COMMON /CONDO5/XOLD,HOUT
 !$OMP THREADPRIVATE(/CONDO5/)
+C     OSlo: each OpenMP thread has its own copy of this COMMON block
+C     (IGLOO integrates parcels concurrently). XOLD is kept there for
+C     CONTD5 (dense output) only, and SOLOUT receives the thread-private
+C     copy XOLDS so the previous grid point it sees is its own.
+      DOUBLE PRECISION XOLDS
 C *** *** *** *** *** *** ***
 C  INITIALISATIONS
 C *** *** *** *** *** *** *** 
@@ -396,10 +401,11 @@ C --- INITIAL PREPARATIONS
       NFCN=NFCN+2
       REJECT=.FALSE.
       XOLD=X
+      XOLDS=X
       IF (IOUT.NE.0) THEN 
           IRTRN=1
           HOUT=H
-          CALL SOLOUT(NACCPT+1,XOLD,X,Y,N,IRTRN)
+          CALL SOLOUT(NACCPT+1,XOLDS,X,Y,N,IRTRN)
           IF (IRTRN.LT.0) GOTO 79
       ELSE
           IRTRN=0
@@ -507,11 +513,14 @@ C ------- STIFFNESS DETECTION
          K1(I)=K2(I)
   44     Y(I)=Y1(I)
          XOLD=X
+         XOLDS=X
          X=XPH
          IF (IOUT.NE.0) THEN
             HOUT=H
-            CALL SOLOUT(NACCPT+1,XOLD,X,Y,N,CONT,ICOMP,NRD,
-     &                  RPAR,IPAR,IRTRN)
+C           OSlo: SOLOUT is the 6-argument solout_if (interface_definitions),
+C           as at the first call above; the original 11-argument call put
+C           IRTRN in CONT(1), so a caller's interrupt was never seen.
+            CALL SOLOUT(NACCPT+1,XOLDS,X,Y,N,IRTRN)
             IF (IRTRN.LT.0) GOTO 79
          END IF 
 C ------- NORMAL EXIT
@@ -545,11 +554,14 @@ C --- FAIL EXIT
       IF (IPRINT.GT.0) WRITE(IPRINT,979)X   
       IF (IPRINT.GT.0) WRITE(IPRINT,*)
      &     ' MORE THAN NMAX =',NMAX,'STEPS ARE NEEDED' 
+ 979  FORMAT(' EXIT OF DOPRI5 AT X=',E18.4) 
       IDID=-2
       RETURN
+C     Label 79 is reached ONLY by a SOLOUT-requested stop (IRTRN<0): a
+C     SUCCESS per the header (IDID=2), so it is silent -- a caller that
+C     interrupts at every cell crossing would otherwise print a line per
+C     interrupt. Genuine failures print above (76/77/78). Same as SDIRK4.
   79  CONTINUE
-      IF (IPRINT.GT.0) WRITE(IPRINT,979)X
- 979  FORMAT(' EXIT OF DOPRI5 AT X=',E18.4) 
       IDID=2
       RETURN
       END
