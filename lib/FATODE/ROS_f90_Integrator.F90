@@ -814,7 +814,7 @@ Stage: DO istage = 1, ros_S
    IMPLICIT NONE
    DOUBLE PRECISION g
 
-    g = 1.0 + 1.0/SQRT(2.0)
+    g = 1.0D0 + 1.0D0/SQRT(2.0D0)
     rosMethod = RS2
 !~~~> Name of the method
     ros_Name = 'ROS-2'
@@ -828,24 +828,24 @@ Stage: DO istage = 1, ros_S
 !       A(i,j) = ros_A( (i-1)*(i-2)/2 + j )
 !       C(i,j) = ros_C( (i-1)*(i-2)/2 + j )
 
-    ros_A(1) = (1.0)/g
-    ros_C(1) = (-2.0)/g
+    ros_A(1) = (1.0D0)/g
+    ros_C(1) = (-2.0D0)/g
 !~~~> Does the stage i require a new function evaluation (ros_NewF(i)=TRUE)
 !   or does it re-use the function evaluation from stage i-1 (ros_NewF(i)=FALSE)
     ros_NewF(1) = .TRUE.
     ros_NewF(2) = .TRUE.
 !~~~> M_i = Coefficients for new step solution
-    ros_M(1)= (3.0)/(2.0*g)
-    ros_M(2)= (1.0)/(2.0*g)
+    ros_M(1)= (3.0D0)/(2.0D0*g)
+    ros_M(2)= (1.0D0)/(2.0D0*g)
 ! E_i = Coefficients for error estimator
-    ros_E(1) = 1.0/(2.0*g)
-    ros_E(2) = 1.0/(2.0*g)
+    ros_E(1) = 1.0D0/(2.0D0*g)
+    ros_E(2) = 1.0D0/(2.0D0*g)
 !~~~> ros_ELO = estimator of local order - the minimum between the
 !    main and the embedded scheme orders plus one
-    ros_ELO = 2.0
+    ros_ELO = 2.0D0
 !~~~> Y_stage_i ~ Y( T + H*Alpha_i )
-    ros_Alpha(1) = 0.0
-    ros_Alpha(2) = 1.0
+    ros_Alpha(1) = 0.0D0
+    ros_Alpha(2) = 1.0D0
 !~~~> Gamma_i = \sum_j  gamma_{i,j}
     ros_Gamma(1) = g
     ros_Gamma(2) =-g
@@ -873,37 +873,37 @@ Stage: DO istage = 1, ros_S
 !       A(i,j) = ros_A( (i-1)*(i-2)/2 + j )
 !       C(i,j) = ros_C( (i-1)*(i-2)/2 + j )
 
-   ros_A(1)= 1.0
-   ros_A(2)= 1.0
-   ros_A(3)= 0.0
+   ros_A(1)= 1.0D0
+   ros_A(2)= 1.0D0
+   ros_A(3)= 0.0D0
 
-   ros_C(1) = -0.10156171083877702091975600115545E+01
-   ros_C(2) =  0.40759956452537699824805835358067E+01
-   ros_C(3) =  0.92076794298330791242156818474003E+01
+   ros_C(1) = -0.10156171083877702091975600115545D+01
+   ros_C(2) =  0.40759956452537699824805835358067D+01
+   ros_C(3) =  0.92076794298330791242156818474003D+01
 !~~~> Does the stage i require a new function evaluation (ros_NewF(i)=TRUE)
 !   or does it re-use the function evaluation from stage i-1 (ros_NewF(i)=FALSE)
    ros_NewF(1) = .TRUE.
    ros_NewF(2) = .TRUE.
    ros_NewF(3) = .FALSE.
 !~~~> M_i = Coefficients for new step solution
-   ros_M(1) =  0.1E+01
-   ros_M(2) =  0.61697947043828245592553615689730E+01
-   ros_M(3) = -0.42772256543218573326238373806514
+   ros_M(1) =  0.1D+01
+   ros_M(2) =  0.61697947043828245592553615689730D+01
+   ros_M(3) = -0.42772256543218573326238373806514D0
 ! E_i = Coefficients for error estimator
-   ros_E(1) =  0.5
-   ros_E(2) = -0.29079558716805469821718236208017E+01
-   ros_E(3) =  0.22354069897811569627360909276199
+   ros_E(1) =  0.5D0
+   ros_E(2) = -0.29079558716805469821718236208017D+01
+   ros_E(3) =  0.22354069897811569627360909276199D0
 !~~~> ros_ELO = estimator of local order - the minimum between the
 !    main and the embedded scheme orders plus 1
-   ros_ELO = 3.0
+   ros_ELO = 3.0D0
 !~~~> Y_stage_i ~ Y( T + H*Alpha_i )
-   ros_Alpha(1)= 0.0
-   ros_Alpha(2)= 0.43586652150845899941601945119356
-   ros_Alpha(3)= 0.43586652150845899941601945119356
+   ros_Alpha(1)= 0.0D0
+   ros_Alpha(2)= 0.43586652150845899941601945119356D0
+   ros_Alpha(3)= 0.43586652150845899941601945119356D0
 !~~~> Gamma_i = \sum_j  gamma_{i,j}
-   ros_Gamma(1)= 0.43586652150845899941601945119356
-   ros_Gamma(2)= 0.24291996454816804366592249683314
-   ros_Gamma(3)= 0.21851380027664058511513169485832E+01
+   ros_Gamma(1)= 0.43586652150845899941601945119356D0
+   ros_Gamma(2)= 0.24291996454816804366592249683314D0
+   ros_Gamma(3)= 0.21851380027664058511513169485832D+01
 
   END SUBROUTINE Ros3
 
@@ -937,19 +937,19 @@ Stage: DO istage = 1, ros_S
 !       A(i,j) = ros_A( (i-1)*(i-2)/2 + j )
 !       C(i,j) = ros_C( (i-1)*(i-2)/2 + j )
 
-   ros_A(1) = 0.2000000000000000E+01
-   ros_A(2) = 0.1867943637803922E+01
-   ros_A(3) = 0.2344449711399156
+   ros_A(1) = 0.2000000000000000D+01
+   ros_A(2) = 0.1867943637803922D+01
+   ros_A(3) = 0.2344449711399156D0
    ros_A(4) = ros_A(2)
    ros_A(5) = ros_A(3)
-   ros_A(6) = 0.0
+   ros_A(6) = 0.0D0
 
-   ros_C(1) =-0.7137615036412310E+01
-   ros_C(2) = 0.2580708087951457E+01
-   ros_C(3) = 0.6515950076447975
-   ros_C(4) =-0.2137148994382534E+01
-   ros_C(5) =-0.3214669691237626
-   ros_C(6) =-0.6949742501781779
+   ros_C(1) =-0.7137615036412310D+01
+   ros_C(2) = 0.2580708087951457D+01
+   ros_C(3) = 0.6515950076447975D0
+   ros_C(4) =-0.2137148994382534D+01
+   ros_C(5) =-0.3214669691237626D0
+   ros_C(6) =-0.6949742501781779D0
 !~~~> Does the stage i require a new function evaluation (ros_NewF(i)=TRUE)
 !   or does it re-use the function evaluation from stage i-1 (ros_NewF(i)=FALSE)
    ros_NewF(1)  = .TRUE.
@@ -957,28 +957,28 @@ Stage: DO istage = 1, ros_S
    ros_NewF(3)  = .TRUE.
    ros_NewF(4)  = .FALSE.
 !~~~> M_i = Coefficients for new step solution
-   ros_M(1) = 0.2255570073418735E+01
-   ros_M(2) = 0.2870493262186792
-   ros_M(3) = 0.4353179431840180
-   ros_M(4) = 0.1093502252409163E+01
+   ros_M(1) = 0.2255570073418735D+01
+   ros_M(2) = 0.2870493262186792D0
+   ros_M(3) = 0.4353179431840180D0
+   ros_M(4) = 0.1093502252409163D+01
 !~~~> E_i  = Coefficients for error estimator
-   ros_E(1) =-0.2815431932141155
-   ros_E(2) =-0.7276199124938920E-01
-   ros_E(3) =-0.1082196201495311
-   ros_E(4) =-0.1093502252409163E+01
+   ros_E(1) =-0.2815431932141155D0
+   ros_E(2) =-0.7276199124938920D-01
+   ros_E(3) =-0.1082196201495311D0
+   ros_E(4) =-0.1093502252409163D+01
 !~~~> ros_ELO  = estimator of local order - the minimum between the
 !    main and the embedded scheme orders plus 1
-   ros_ELO  = 4.0
+   ros_ELO  = 4.0D0
 !~~~> Y_stage_i ~ Y( T + H*Alpha_i )
-   ros_Alpha(1) = 0.0
-   ros_Alpha(2) = 0.1145640000000000E+01
-   ros_Alpha(3) = 0.6552168638155900
+   ros_Alpha(1) = 0.0D0
+   ros_Alpha(2) = 0.1145640000000000D+01
+   ros_Alpha(3) = 0.6552168638155900D0
    ros_Alpha(4) = ros_Alpha(3)
 !~~~> Gamma_i = \sum_j  gamma_{i,j}
-   ros_Gamma(1) = 0.5728200000000000
-   ros_Gamma(2) =-0.1769193891319233E+01
-   ros_Gamma(3) = 0.7592633437920482
-   ros_Gamma(4) =-0.1049021087100450
+   ros_Gamma(1) = 0.5728200000000000D0
+   ros_Gamma(2) =-0.1769193891319233D+01
+   ros_Gamma(3) = 0.7592633437920482D0
+   ros_Gamma(4) =-0.1049021087100450D0
 
   END SUBROUTINE Ros4
 
@@ -1003,19 +1003,19 @@ Stage: DO istage = 1, ros_S
 !       A(i,j) = ros_A( (i-1)*(i-2)/2 + j )
 !       C(i,j) = ros_C( (i-1)*(i-2)/2 + j )
 
-   ros_A(1) = 0.0
-   ros_A(2) = 2.0
-   ros_A(3) = 0.0
-   ros_A(4) = 2.0
-   ros_A(5) = 0.0
-   ros_A(6) = 1.0
+   ros_A(1) = 0.0D0
+   ros_A(2) = 2.0D0
+   ros_A(3) = 0.0D0
+   ros_A(4) = 2.0D0
+   ros_A(5) = 0.0D0
+   ros_A(6) = 1.0D0
 
-   ros_C(1) = 4.0
-   ros_C(2) = 1.0
-   ros_C(3) =-1.0
-   ros_C(4) = 1.0
-   ros_C(5) =-1.0
-   ros_C(6) =-(8.0/3.0)
+   ros_C(1) = 4.0D0
+   ros_C(2) = 1.0D0
+   ros_C(3) =-1.0D0
+   ros_C(4) = 1.0D0
+   ros_C(5) =-1.0D0
+   ros_C(6) =-(8.0D0/3.0D0)
 
 !~~~> Does the stage i require a new function evaluation (ros_NewF(i)=TRUE)
 !   or does it re-use the function evaluation from stage i-1 (ros_NewF(i)=FALSE)
@@ -1024,28 +1024,28 @@ Stage: DO istage = 1, ros_S
    ros_NewF(3)  = .TRUE.
    ros_NewF(4)  = .TRUE.
 !~~~> M_i = Coefficients for new step solution
-   ros_M(1) = 2.0
-   ros_M(2) = 0.0
-   ros_M(3) = 1.0
-   ros_M(4) = 1.0
+   ros_M(1) = 2.0D0
+   ros_M(2) = 0.0D0
+   ros_M(3) = 1.0D0
+   ros_M(4) = 1.0D0
 !~~~> E_i  = Coefficients for error estimator
-   ros_E(1) = 0.0
-   ros_E(2) = 0.0
-   ros_E(3) = 0.0
-   ros_E(4) = 1.0
+   ros_E(1) = 0.0D0
+   ros_E(2) = 0.0D0
+   ros_E(3) = 0.0D0
+   ros_E(4) = 1.0D0
 !~~~> ros_ELO  = estimator of local order - the minimum between the
 !    main and the embedded scheme orders plus 1
-   ros_ELO  = 3.0
+   ros_ELO  = 3.0D0
 !~~~> Y_stage_i ~ Y( T + H*Alpha_i )
-   ros_Alpha(1) = 0.0
-   ros_Alpha(2) = 0.0
-   ros_Alpha(3) = 1.0
-   ros_Alpha(4) = 1.0
+   ros_Alpha(1) = 0.0D0
+   ros_Alpha(2) = 0.0D0
+   ros_Alpha(3) = 1.0D0
+   ros_Alpha(4) = 1.0D0
 !~~~> Gamma_i = \sum_j  gamma_{i,j}
-   ros_Gamma(1) = 0.5
-   ros_Gamma(2) = 1.5
-   ros_Gamma(3) = 0.0
-   ros_Gamma(4) = 0.0
+   ros_Gamma(1) = 0.5D0
+   ros_Gamma(2) = 1.5D0
+   ros_Gamma(3) = 0.0D0
+   ros_Gamma(4) = 0.0D0
 
   END SUBROUTINE Rodas3
 
@@ -1069,20 +1069,20 @@ Stage: DO istage = 1, ros_S
     ros_S = 6
 
 !~~~> Y_stage_i ~ Y( T + H*Alpha_i )
-    ros_Alpha(1) = 0.000
-    ros_Alpha(2) = 0.386
-    ros_Alpha(3) = 0.210
-    ros_Alpha(4) = 0.630
-    ros_Alpha(5) = 1.000
-    ros_Alpha(6) = 1.000
+    ros_Alpha(1) = 0.000D0
+    ros_Alpha(2) = 0.386D0
+    ros_Alpha(3) = 0.210D0
+    ros_Alpha(4) = 0.630D0
+    ros_Alpha(5) = 1.000D0
+    ros_Alpha(6) = 1.000D0
 
 !~~~> Gamma_i = \sum_j  gamma_{i,j}
-    ros_Gamma(1) = 0.2500000000000000
-    ros_Gamma(2) =-0.1043000000000000
-    ros_Gamma(3) = 0.1035000000000000
-    ros_Gamma(4) =-0.3620000000000023E-01
-    ros_Gamma(5) = 0.0
-    ros_Gamma(6) = 0.0
+    ros_Gamma(1) = 0.2500000000000000D0
+    ros_Gamma(2) =-0.1043000000000000D0
+    ros_Gamma(3) = 0.1035000000000000D0
+    ros_Gamma(4) =-0.3620000000000023D-01
+    ros_Gamma(5) = 0.0D0
+    ros_Gamma(6) = 0.0D0
 
 !~~~> The coefficient matrices A and C are strictly lower triangular.
 !   The lower triangular (subdiagonal) elements are stored in row-wise order:
@@ -1090,53 +1090,53 @@ Stage: DO istage = 1, ros_S
 !   The general mapping formula is:  A(i,j) = ros_A( (i-1)*(i-2)/2 + j )
 !                  C(i,j) = ros_C( (i-1)*(i-2)/2 + j )
 
-    ros_A(1) = 0.1544000000000000E+01
-    ros_A(2) = 0.9466785280815826
-    ros_A(3) = 0.2557011698983284
-    ros_A(4) = 0.3314825187068521E+01
-    ros_A(5) = 0.2896124015972201E+01
-    ros_A(6) = 0.9986419139977817
-    ros_A(7) = 0.1221224509226641E+01
-    ros_A(8) = 0.6019134481288629E+01
-    ros_A(9) = 0.1253708332932087E+02
-    ros_A(10) =-0.6878860361058950
+    ros_A(1) = 0.1544000000000000D+01
+    ros_A(2) = 0.9466785280815826D0
+    ros_A(3) = 0.2557011698983284D0
+    ros_A(4) = 0.3314825187068521D+01
+    ros_A(5) = 0.2896124015972201D+01
+    ros_A(6) = 0.9986419139977817D0
+    ros_A(7) = 0.1221224509226641D+01
+    ros_A(8) = 0.6019134481288629D+01
+    ros_A(9) = 0.1253708332932087D+02
+    ros_A(10) =-0.6878860361058950D0
     ros_A(11) = ros_A(7)
     ros_A(12) = ros_A(8)
     ros_A(13) = ros_A(9)
     ros_A(14) = ros_A(10)
-    ros_A(15) = 1.0
+    ros_A(15) = 1.0D0
 
-    ros_C(1) =-0.5668800000000000E+01
-    ros_C(2) =-0.2430093356833875E+01
-    ros_C(3) =-0.2063599157091915
-    ros_C(4) =-0.1073529058151375
-    ros_C(5) =-0.9594562251023355E+01
-    ros_C(6) =-0.2047028614809616E+02
-    ros_C(7) = 0.7496443313967647E+01
-    ros_C(8) =-0.1024680431464352E+02
-    ros_C(9) =-0.3399990352819905E+02
-    ros_C(10) = 0.1170890893206160E+02
-    ros_C(11) = 0.8083246795921522E+01
-    ros_C(12) =-0.7981132988064893E+01
-    ros_C(13) =-0.3152159432874371E+02
-    ros_C(14) = 0.1631930543123136E+02
-    ros_C(15) =-0.6058818238834054E+01
+    ros_C(1) =-0.5668800000000000D+01
+    ros_C(2) =-0.2430093356833875D+01
+    ros_C(3) =-0.2063599157091915D0
+    ros_C(4) =-0.1073529058151375D0
+    ros_C(5) =-0.9594562251023355D+01
+    ros_C(6) =-0.2047028614809616D+02
+    ros_C(7) = 0.7496443313967647D+01
+    ros_C(8) =-0.1024680431464352D+02
+    ros_C(9) =-0.3399990352819905D+02
+    ros_C(10) = 0.1170890893206160D+02
+    ros_C(11) = 0.8083246795921522D+01
+    ros_C(12) =-0.7981132988064893D+01
+    ros_C(13) =-0.3152159432874371D+02
+    ros_C(14) = 0.1631930543123136D+02
+    ros_C(15) =-0.6058818238834054D+01
 
 !~~~> M_i = Coefficients for new step solution
     ros_M(1) = ros_A(7)
     ros_M(2) = ros_A(8)
     ros_M(3) = ros_A(9)
     ros_M(4) = ros_A(10)
-    ros_M(5) = 1.0
-    ros_M(6) = 1.0
+    ros_M(5) = 1.0D0
+    ros_M(6) = 1.0D0
 
 !~~~> E_i  = Coefficients for error estimator
-    ros_E(1) = 0.0
-    ros_E(2) = 0.0
-    ros_E(3) = 0.0
-    ros_E(4) = 0.0
-    ros_E(5) = 0.0
-    ros_E(6) = 1.0
+    ros_E(1) = 0.0D0
+    ros_E(2) = 0.0D0
+    ros_E(3) = 0.0D0
+    ros_E(4) = 0.0D0
+    ros_E(5) = 0.0D0
+    ros_E(6) = 1.0D0
 
 !~~~> Does the stage i require a new function evaluation (ros_NewF(i)=TRUE)
 !   or does it re-use the function evaluation from stage i-1 (ros_NewF(i)=FALSE)
@@ -1149,7 +1149,7 @@ Stage: DO istage = 1, ros_S
 
 !~~~> ros_ELO  = estimator of local order - the minimum between the
 !        main and the embedded scheme orders plus 1
-    ros_ELO = 4.0
+    ros_ELO = 4.0D0
 
   END SUBROUTINE Rodas4
 
