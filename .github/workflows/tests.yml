@@ -51,6 +51,8 @@ jobs:
           sudo apt-get install -y gfortran libblas-dev liblapack-dev
           echo "FC=gfortran" >> "$GITHUB_ENV"
           echo "CC=gcc" >> "$GITHUB_ENV"
+          # Debug information, for the file and line of a crash in the backtrace (the code generated is the same)
+          echo "DEBUG_FLAGS=-g -fbacktrace" >> "$GITHUB_ENV"
 
       - name: Install Intel compilers
         if: matrix.compiler == 'intel'
@@ -68,6 +70,7 @@ jobs:
           done
           echo "FC=ifx" >> "$GITHUB_ENV"
           echo "CC=icx" >> "$GITHUB_ENV"
+          echo "DEBUG_FLAGS=-g -traceback" >> "$GITHUB_ENV"
 
       # The SUNDIALS commit that OSLO records and the compilers: what the stamp of a SUNDIALS installation holds
       # (CMakeLists.txt), so that the cache is reused only where OSLO would reuse the installation
@@ -91,6 +94,7 @@ jobs:
             -DCMAKE_BUILD_TYPE=RELEASE \
             -DCMAKE_Fortran_COMPILER="$FC" \
             -DCMAKE_C_COMPILER="$CC" \
+            -DCMAKE_Fortran_FLAGS="$DEBUG_FLAGS" \
             -DUSE_OPENMP=${{ matrix.openmp }} \
             -DUSE_MPI=OFF \
             -DUSE_SUNDIALS=${{ matrix.sundials }} \
@@ -99,16 +103,17 @@ jobs:
       - name: Build
         run: cmake --build build --parallel "$(nproc)"
 
-      # On failure, the failed checks of the test programs (their FAILED: lines) also go into one annotation, which the
-      # pull request shows without opening the log
+      # On failure, the output of the failed tests (ctest prints it) also goes into one annotation, which the pull
+      # request shows without opening the log
       - name: Test
         run: |
           # The status of ctest, not of tee: a run step has no pipefail unless it sets shell: bash
           ctest --test-dir build --output-on-failure --timeout 300 2>&1 | tee ctest.log
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then
-            failures=$(grep -E '^FAILED:|\*\*\*|ERROR STOP|Error termination|SIGSEGV|tests failed' ctest.log | head -n 80 \
-                       | sed 's/%/%25/g' | awk 'BEGIN { ORS = "%0A" } 1')
-            echo "::error title=CTest failures (${{ matrix.name }})::${failures}"
+            output=$(sed -n '/^Test project/,$p' ctest.log | tail -n 300 | sed 's/%/%25/g;s/\r/%0D/g' \
+                     | awk 'BEGIN { ORS = "%0A" } 1')
+            title=$(echo "CTest failures (${{ matrix.name }})" | sed 's/%/%25/g;s/,/%2C/g;s/:/%3A/g')
+            echo "::error title=${title}::${output}"
           fi
           exit "$status"
