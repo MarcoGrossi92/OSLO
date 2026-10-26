@@ -26,7 +26,7 @@ C ---  B=IDENTITY, JACOBIAN A FULL MATRIX
          END DO
          E1(J,J)=E1(J,J)+FAC1
       END DO
-      CALL DECR (N,LDE1,E1,IP1,IER)
+      CALL DEC (N,LDE1,E1,IP1,IER)
       RETURN
 C
 C -----------------------------------------------------------
@@ -50,7 +50,7 @@ C ---  B=IDENTITY, JACOBIAN A FULL MATRIX, SECOND ORDER
             E1(I,J)=E1(I,J)-SUM
          END DO
       END DO
-      CALL DECR (NM1,LDE1,E1,IP1,IER)
+      CALL DEC (NM1,LDE1,E1,IP1,IER)
       RETURN
 C
 C -----------------------------------------------------------
@@ -102,7 +102,7 @@ C ---  B IS A BANDED MATRIX, JACOBIAN A FULL MATRIX
             E1(I,J)=E1(I,J)+FAC1*FMAS(I-J+MBDIAG,J)
          END DO
       END DO
-      CALL DECR (N,LDE1,E1,IP1,IER)
+      CALL DEC (N,LDE1,E1,IP1,IER)
       RETURN
 C
 C -----------------------------------------------------------
@@ -161,7 +161,7 @@ C ---  B IS A FULL MATRIX, JACOBIAN A FULL MATRIX
             E1(I,J)=FMAS(I,J)*FAC1-FJAC(I,J)
          END DO
       END DO
-      CALL DECR (N,LDE1,E1,IP1,IER)
+      CALL DEC (N,LDE1,E1,IP1,IER)
       RETURN
 C
 C -----------------------------------------------------------
@@ -478,7 +478,7 @@ C ---  B=IDENTITY, JACOBIAN A FULL MATRIX
       DO I=1,N
          Z1(I)=Z1(I)-F1(I)*FAC1
       END DO
-      CALL SOLR (N,LDE1,E1,Z1,IP1)
+      CALL SOL (N,LDE1,E1,Z1,IP1)
       RETURN
 C
 C -----------------------------------------------------------
@@ -501,7 +501,7 @@ C ---  B=IDENTITY, JACOBIAN A FULL MATRIX, SECOND ORDER
             END DO
          END DO
       END DO
-      CALL SOLR (NM1,LDE1,E1,Z1(M1+1),IP1)
+      CALL SOL (NM1,LDE1,E1,Z1(M1+1),IP1)
  49   CONTINUE
       DO I=M1,1,-1
          Z1(I)=(Z1(I)+Z1(M2+I))/FAC1
@@ -552,7 +552,7 @@ C ---  B IS A BANDED MATRIX, JACOBIAN A FULL MATRIX
          END DO
          Z1(I)=Z1(I)+S1*FAC1
       END DO
-      CALL SOLR (N,LDE1,E1,Z1,IP1)
+      CALL SOL (N,LDE1,E1,Z1,IP1)
       RETURN
 C
 C -----------------------------------------------------------
@@ -598,7 +598,7 @@ C ---  B IS A FULL MATRIX, JACOBIAN A FULL MATRIX
          END DO
          Z1(I)=Z1(I)+S1*FAC1
       END DO
-      CALL SOLR (N,LDE1,E1,Z1,IP1)
+      CALL SOL (N,LDE1,E1,Z1,IP1)
       RETURN
 C
 C -----------------------------------------------------------
@@ -976,7 +976,7 @@ C ---  B=IDENTITY, JACOBIAN A FULL MATRIX
          Z2(I)=Z2(I)+S2*ALPHN-S3*BETAN
          Z3(I)=Z3(I)+S3*ALPHN+S2*BETAN
       END DO
-      CALL SOLR (N,LDE1,E1,Z1,IP1)
+      CALL SOL (N,LDE1,E1,Z1,IP1)
       CALL SOLC (N,LDE1,E2R,E2I,Z2,Z3,IP2)
       RETURN
 C
@@ -1012,7 +1012,7 @@ C ---  B=IDENTITY, JACOBIAN A FULL MATRIX, SECOND ORDER
             END DO
          END DO
       END DO
-      CALL SOLR (NM1,LDE1,E1,Z1(M1+1),IP1)
+      CALL SOL (NM1,LDE1,E1,Z1(M1+1),IP1)
       CALL SOLC (NM1,LDE1,E2R,E2I,Z2(M1+1),Z3(M1+1),IP2)
  49   CONTINUE
       DO I=M1,1,-1
@@ -1095,7 +1095,7 @@ C ---  B IS A BANDED MATRIX, JACOBIAN A FULL MATRIX
          Z2(I)=Z2(I)+S2*ALPHN-S3*BETAN
          Z3(I)=Z3(I)+S3*ALPHN+S2*BETAN
       END DO
-      CALL SOLR (N,LDE1,E1,Z1,IP1)
+      CALL SOL (N,LDE1,E1,Z1,IP1)
       CALL SOLC(N,LDE1,E2R,E2I,Z2,Z3,IP2)
       RETURN
 C
@@ -1171,7 +1171,7 @@ C ---  B IS A FULL MATRIX, JACOBIAN A FULL MATRIX
          Z2(I)=Z2(I)+S2*ALPHN-S3*BETAN
          Z3(I)=Z3(I)+S3*ALPHN+S2*BETAN
       END DO
-      CALL SOLR (N,LDE1,E1,Z1,IP1)
+      CALL SOL (N,LDE1,E1,Z1,IP1)
       CALL SOLC(N,LDE1,E2R,E2I,Z2,Z3,IP2)
       RETURN
 C
@@ -1302,7 +1302,7 @@ C ------  B=IDENTITY, JACOBIAN A FULL MATRIX
          F2(I)=HEE1*Z1(I)+HEE2*Z2(I)+HEE3*Z3(I)
          CONT(I)=F2(I)+Y0(I)
       END DO
-      CALL SOLR (N,LDE1,E1,CONT,IP1)
+      CALL SOL (N,LDE1,E1,CONT,IP1)
       GOTO 77
 C
   11  CONTINUE
@@ -1322,7 +1322,7 @@ C ------  B=IDENTITY, JACOBIAN A FULL MATRIX, SECOND ORDER
             END DO
          END DO
       END DO
-      CALL SOLR (NM1,LDE1,E1,CONT(M1+1),IP1)
+      CALL SOL (NM1,LDE1,E1,CONT(M1+1),IP1)
       DO I=M1,1,-1
          CONT(I)=(CONT(I)+CONT(M2+I))/FAC1
       END DO
@@ -1373,7 +1373,7 @@ C ------  B IS A BANDED MATRIX, JACOBIAN A FULL MATRIX
          F2(I)=SUM
          CONT(I)=SUM+Y0(I)
       END DO
-      CALL SOLR (N,LDE1,E1,CONT,IP1)
+      CALL SOL (N,LDE1,E1,CONT,IP1)
       GOTO 77
 C
   13  CONTINUE
@@ -1445,7 +1445,7 @@ C ------  B IS A FULL MATRIX, JACOBIAN A FULL MATRIX
          F2(I)=SUM
          CONT(I)=SUM+Y0(I)
       END DO
-      CALL SOLR (N,LDE1,E1,CONT,IP1)
+      CALL SOL (N,LDE1,E1,CONT,IP1)
       GOTO 77
 C
   15  CONTINUE
@@ -1527,7 +1527,7 @@ C
           GOTO (31,32,31,32,31,32,33,55,55,55,41,42,41,42,41), IJOB
 C ------ FULL MATRIX OPTION
   31      CONTINUE
-          CALL SOLR(N,LDE1,E1,CONT,IP1)
+          CALL SOL(N,LDE1,E1,CONT,IP1)
           GOTO 88
 C ------ FULL MATRIX OPTION, SECOND ORDER
  41      CONTINUE
@@ -1541,7 +1541,7 @@ C ------ FULL MATRIX OPTION, SECOND ORDER
                END DO
             END DO
          END DO
-         CALL SOLR(NM1,LDE1,E1,CONT(M1+1),IP1)
+         CALL SOL(NM1,LDE1,E1,CONT(M1+1),IP1)
          DO I=M1,1,-1
             CONT(I)=(CONT(I)+CONT(M2+I))/FAC1
          END DO
@@ -1635,7 +1635,7 @@ C ------  B=IDENTITY, JACOBIAN A FULL MATRIX
          FF(I+N)=SUM/H
          CONT(I)=FF(I+N)+Y0(I)
       END DO
-      CALL SOLR (N,LDE1,E1,CONT,IP1)
+      CALL SOL (N,LDE1,E1,CONT,IP1)
       GOTO 77
 C
   11  CONTINUE
@@ -1659,7 +1659,7 @@ C ------  B=IDENTITY, JACOBIAN A FULL MATRIX, SECOND ORDER
             END DO
          END DO
       END DO
-      CALL SOLR (NM1,LDE1,E1,CONT(M1+1),IP1)
+      CALL SOL (NM1,LDE1,E1,CONT(M1+1),IP1)
       DO I=M1,1,-1
          CONT(I)=(CONT(I)+CONT(M2+I))/FAC1
       END DO
@@ -1722,7 +1722,7 @@ C ------  B IS A BANDED MATRIX, JACOBIAN A FULL MATRIX
          FF(I+N)=SUM
          CONT(I)=SUM+Y0(I)
       END DO
-      CALL SOLR (N,LDE1,E1,CONT,IP1)
+      CALL SOL (N,LDE1,E1,CONT,IP1)
       GOTO 77
 C
   13  CONTINUE
@@ -1818,7 +1818,7 @@ C ------  B IS A FULL MATRIX, JACOBIAN A FULL MATRIX
          FF(I+N)=SUM
          CONT(I)=SUM+Y0(I)
       END DO
-      CALL SOLR (N,LDE1,E1,CONT,IP1)
+      CALL SOL (N,LDE1,E1,CONT,IP1)
       GOTO 77
 C
   15  CONTINUE
@@ -1912,7 +1912,7 @@ C
           GOTO (31,32,31,32,31,32,33,55,55,55,41,42,41,42,41), IJOB
 C ------ FULL MATRIX OPTION
  31      CONTINUE
-         CALL SOLR (N,LDE1,E1,CONT,IP1)
+         CALL SOL (N,LDE1,E1,CONT,IP1)
           GOTO 88
 C ------ FULL MATRIX OPTION, SECOND ORDER
  41      CONTINUE
@@ -1926,7 +1926,7 @@ C ------ FULL MATRIX OPTION, SECOND ORDER
                END DO
             END DO
          END DO
-         CALL SOLR (NM1,LDE1,E1,CONT(M1+1),IP1)
+         CALL SOL (NM1,LDE1,E1,CONT(M1+1),IP1)
          DO I=M1,1,-1
             CONT(I)=(CONT(I)+CONT(M2+I))/FAC1
          END DO
@@ -2029,7 +2029,7 @@ C ---  B=IDENTITY, JACOBIAN A FULL MATRIX
             AK(I)=AK(I)+YNEW(I)
          END DO
       END IF
-      CALL SOLR (N,LDE,E,AK,IP)
+      CALL SOL (N,LDE,E,AK,IP)
       RETURN
 C
 C -----------------------------------------------------------
@@ -2053,7 +2053,7 @@ C ---  B=IDENTITY, JACOBIAN A FULL MATRIX, SECOND ORDER
             END DO
          END DO
       END DO
-      CALL SOLR (NM1,LDE,E,AK(M1+1),IP)
+      CALL SOL (NM1,LDE,E,AK(M1+1),IP)
       DO I=M1,1,-1
          AK(I)=(AK(I)+AK(M2+I))/FAC1
       END DO
@@ -2111,7 +2111,7 @@ C ---  B IS A BANDED MATRIX, JACOBIAN A FULL MATRIX
          AK(I)=AK(I)+SUM
       END DO
       END IF
-      CALL SOLR (N,LDE,E,AK,IP)
+      CALL SOL (N,LDE,E,AK,IP)
       RETURN
 C
 C -----------------------------------------------------------
@@ -2163,7 +2163,7 @@ C ---  B IS A FULL MATRIX, JACOBIAN A FULL MATRIX
          AK(I)=AK(I)+SUM
       END DO
       END IF
-      CALL SOLR (N,LDE,E,AK,IP)
+      CALL SOL (N,LDE,E,AK,IP)
       RETURN
 C
 C -----------------------------------------------------------
@@ -2225,7 +2225,7 @@ C -----------------------------------------------------------
 C
    1  CONTINUE
 C ---  B=IDENTITY, JACOBIAN A FULL MATRIX
-      CALL SOLR (N,LDE,E,DEL,IP)
+      CALL SOL (N,LDE,E,DEL,IP)
       RETURN
 C
 C -----------------------------------------------------------
@@ -2244,7 +2244,7 @@ C ---  B=IDENTITY, JACOBIAN A FULL MATRIX, SECOND ORDER
             END DO
          END DO
       END DO
-      CALL SOLR (NM1,LDE,E,DEL(M1+1),IP)
+      CALL SOL (NM1,LDE,E,DEL(M1+1),IP)
       DO I=M1,1,-1
          DEL(I)=(DEL(I)+DEL(M2+I))/FAC1
       END DO
@@ -2320,10 +2320,7 @@ C
 C
 C     END OF SUBROUTINE SLVSEU
 C
-C     OSLO: DECR, not DEC as in Hairer's sources: Intel-ODE (linked on Linux)
-C     has its own DEC and SOL, with other arguments, and with -fno-underscoring
-C     the two would share one symbol
-      SUBROUTINE DECR (N, NDIM, A, IP, IER)
+      SUBROUTINE DEC (N, NDIM, A, IP, IER)
 C VERSION REAL DOUBLE PRECISION
       INTEGER N,NDIM,IP,IER,NM1,K,KP1,M,I,J
       DOUBLE PRECISION A,T
@@ -2390,10 +2387,7 @@ C----------------------- END OF SUBROUTINE DEC -------------------------
       END
 C
 C
-C     OSLO: SOLR, not SOL as in Hairer's sources: Intel-ODE (linked on Linux)
-C     has its own DEC and SOL, with other arguments, and with -fno-underscoring
-C     the two would share one symbol
-      SUBROUTINE SOLR (N, NDIM, A, B, IP)
+      SUBROUTINE SOL (N, NDIM, A, B, IP)
 C VERSION REAL DOUBLE PRECISION
       INTEGER N,NDIM,IP,NM1,K,KP1,M,I,KB,KM1
       DOUBLE PRECISION A,B,T

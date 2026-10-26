@@ -752,7 +752,7 @@ C --- THE MATRIX E (MAS IS A BANDED MATRIX, JACOBIAN A FULL MATRIX)
                   I2=MIN0(N,J+MLMAS)
                   DO 226 I=I1,I2
  226              E(I,J)=E(I,J)+FAC1*FMAS(I-J+MBDIAG,J)
-                  CALL DECR(N,LE,E,IP,IER)
+                  CALL DEC(N,LE,E,IP,IER)
                   IF (IER.NE.0) GOTO 78
               ELSE
 C --- THE MATRIX E (MAS IS A FULL MATRIX, JACOBIAN A FULL MATRIX)
@@ -760,7 +760,7 @@ C --- THE MATRIX E (MAS IS A FULL MATRIX, JACOBIAN A FULL MATRIX)
                       DO 324 J=1,N
                       DO 324 I=1,N
  324                  E(I,J)=FMAS(I,J)*FAC1-FJAC(I,J)
-                      CALL DECR(N,LE,E,IP,IER)
+                      CALL DEC(N,LE,E,IP,IER)
                       IF (IER.NE.0) GOTO 78
                   ELSE
 C --- THE MATRIX E (B IS A FULL MATRIX, JACOBIAN A BANDED MATRIX)
@@ -785,7 +785,7 @@ C --- THE MATRIX E (MAS=IDENTITY, JACOBIAN A FULL MATRIX)
                   DO 525 I=1,N
  525              E(I,J)=-FJAC(I,J)
  526              E(J,J)=E(J,J)+FAC1
-                  CALL DECR(N,LE,E,IP,IER)
+                  CALL DEC(N,LE,E,IP,IER)
                   IF (IER.NE.0) GOTO 79 
               ELSE
                   DO 624 J=1,N-1
@@ -900,7 +900,7 @@ C ---     SOLVE THE LINEAR SYSTEMS
                     IF (BANDED) THEN
                         CALL SOLB(N,LE,E,MLE,MUE,F1,IP)
                     ELSE
-                        CALL SOLR(N,LE,E,F1,IP)
+                        CALL SOL(N,LE,E,F1,IP)
                     END IF
                 ELSE
                     DO 246 I=1,N
@@ -908,7 +908,7 @@ C ---     SOLVE THE LINEAR SYSTEMS
                     DO 245 J=1,N
  245                S1=S1+FMAS(I,J)*H1(J)
  246                F1(I)=S1*FAC1+F1(I)
-                    CALL SOLR(N,LE,E,F1,IP)
+                    CALL SOL(N,LE,E,F1,IP)
                 END IF
             ELSE
                 DO 345 I=1,N
@@ -917,7 +917,7 @@ C ---     SOLVE THE LINEAR SYSTEMS
                     CALL SOLB(N,LE,E,MLE,MUE,F1,IP)
                 ELSE
                     IF (NHESS.EQ.0) THEN
-                        CALL SOLR(N,LE,E,F1,IP)
+                        CALL SOL(N,LE,E,F1,IP)
                     ELSE
                         DO 140 MMM=N-2,1,-1
                         MP=N-MMM
@@ -1033,7 +1033,7 @@ C *** *** *** *** *** *** ***
           CALL SOLB(N,LE,E,MLE,MUE,CONT,IP)
       ELSE
                IF (NHESS.EQ.0) THEN
-                   CALL SOLR(N,LE,E,CONT,IP)
+                   CALL SOL(N,LE,E,CONT,IP)
                 ELSE
                    DO 540 MMM=N-2,1,-1
                    MP=N-MMM
