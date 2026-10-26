@@ -38,6 +38,13 @@ jobs:
             compiler: intel
             openmp: ON
             sundials: ON
+          # The same with array bounds checks and without -ipo and -fp-model fast (build type TESTING: -O2 -g
+          # -check bounds), which separates a memory error from an effect of the release optimizations
+          - name: ifx, OpenMP, SUNDIALS, bounds checks
+            compiler: intel
+            openmp: ON
+            sundials: ON
+            build_type: TESTING
 
     steps:
       # Without submodules: lib/sundials is cloned at configure time, only when SUNDIALS has to be built
@@ -91,7 +98,7 @@ jobs:
       - name: Configure
         run: |
           cmake -S . -B build \
-            -DCMAKE_BUILD_TYPE=RELEASE \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type || 'RELEASE' }} \
             -DCMAKE_Fortran_COMPILER="$FC" \
             -DCMAKE_C_COMPILER="$CC" \
             -DCMAKE_Fortran_FLAGS="$DEBUG_FLAGS" \
@@ -103,12 +110,13 @@ jobs:
       - name: Build
         run: cmake --build build --parallel "$(nproc)"
 
-      # On failure, the output of the failed tests (ctest prints it) also goes into one annotation, which the pull
-      # request shows without opening the log
+      # Each test up to three times, until it fails: a race between threads may not show in one run. On failure, the
+      # output of the failed tests (ctest prints it) also goes into one annotation, which the pull request shows
+      # without opening the log
       - name: Test
         run: |
           # The status of ctest, not of tee: a run step has no pipefail unless it sets shell: bash
-          ctest --test-dir build --output-on-failure --timeout 300 2>&1 | tee ctest.log
+          ctest --test-dir build --output-on-failure --timeout 300 --repeat until-fail:3 2>&1 | tee ctest.log
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then
             output=$(sed -n '/^Test project/,$p' ctest.log | tail -n 300 | sed 's/%/%25/g;s/\r/%0D/g' \
