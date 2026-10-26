@@ -42,7 +42,7 @@ jobs:
     steps:
       # Without submodules: lib/sundials is cloned at configure time, only when SUNDIALS has to be built
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install GNU compilers and libraries
         if: matrix.compiler == 'gnu'
@@ -80,7 +80,7 @@ jobs:
 
       - name: Cache SUNDIALS
         if: matrix.sundials == 'ON'
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: build-deps/sundials
           key: sundials-${{ runner.os }}-${{ matrix.compiler }}-openmp${{ matrix.openmp }}-${{ steps.sundials.outputs.commit }}-${{ steps.sundials.outputs.compilers }}
@@ -99,5 +99,15 @@ jobs:
       - name: Build
         run: cmake --build build --parallel "$(nproc)"
 
+      # On failure, the failed checks of the test programs (their FAILED: lines) also go into one annotation, which the
+      # pull request shows without opening the log
       - name: Test
-        run: ctest --test-dir build --output-on-failure --timeout 300
+        run: |
+          status=0
+          ctest --test-dir build --output-on-failure --timeout 300 2>&1 | tee ctest.log || status=$?
+          if [ "$status" -ne 0 ]; then
+            failures=$(grep -E '^FAILED:|\*\*\*|ERROR STOP|Error termination|SIGSEGV|tests failed' ctest.log | head -n 80 \
+                       | sed 's/%/%25/g' | awk 'BEGIN { ORS = "%0A" } 1')
+            echo "::error title=CTest failures (${{ matrix.name }})::${failures}"
+          fi
+          exit "$status"
