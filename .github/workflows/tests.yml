@@ -19,6 +19,8 @@ jobs:
   test:
     name: ${{ matrix.name }}
     runs-on: ubuntu-24.04
+    # A hung job (a stalled package download, a deadlock in a test) fails after this instead of GitHub's 6 hours
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -53,6 +55,7 @@ jobs:
 
       - name: Install GNU compilers and libraries
         if: matrix.compiler == 'gnu'
+        timeout-minutes: 10
         run: |
           sudo apt-get update
           sudo apt-get install -y gfortran libblas-dev liblapack-dev
@@ -63,6 +66,7 @@ jobs:
 
       - name: Install Intel compilers
         if: matrix.compiler == 'intel'
+        timeout-minutes: 10
         run: |
           wget -qO- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB \
             | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
