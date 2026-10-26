@@ -103,8 +103,9 @@ jobs:
       # pull request shows without opening the log
       - name: Test
         run: |
-          status=0
-          ctest --test-dir build --output-on-failure --timeout 300 2>&1 | tee ctest.log || status=$?
+          # The status of ctest, not of tee: a run step has no pipefail unless it sets shell: bash
+          ctest --test-dir build --output-on-failure --timeout 300 2>&1 | tee ctest.log
+          status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then
             failures=$(grep -E '^FAILED:|\*\*\*|ERROR STOP|Error termination|SIGSEGV|tests failed' ctest.log | head -n 80 \
                        | sed 's/%/%25/g' | awk 'BEGIN { ORS = "%0A" } 1')
