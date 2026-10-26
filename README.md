@@ -127,6 +127,36 @@ make
 make install
 ```
 
+`-DOSLO_SUNDIALS_DIR=<folder>` installs SUNDIALS in `<folder>` instead of `sundials-install`. An installation is used
+as long as its stamp (`oslo-stamp.txt`: the SUNDIALS commit, the compilers and the flags) matches the build, and is
+rebuilt otherwise; the SUNDIALS sources (the submodule `lib/sundials`) are cloned only to build it.
+
+---
+
+## Testing
+
+A full build compiles the test programs in `bin/test/`; run them with `ctest`:
+
+```bash
+ctest --test-dir build --output-on-failure
+```
+
+Each program checks its results and stops with a nonzero exit status when one is wrong:
+
+| Test                  | What it checks                                                                                       |
+| --------------------- | ---------------------------------------------------------------------------------------------------- |
+| `OSLO.robertson`      | Every stiff solver on Robertson's problem, against reference values, up to t = 4e10; also with the analytical Jacobian (IJAC = 1) |
+| `OSLO.exact_solutions`| Every solver on problems with a known solution: Prothero-Robinson (stiff) and the harmonic oscillator |
+| `OSLO.options`        | `solout`, `hmax`, interrupting from `solout`, and the failure status when the step limit is reached   |
+| `OSLO.robertsonOMP`   | (with OpenMP) every solver from a parallel region on 4 threads: each result equal to the serial one   |
+
+The pre-push hook in `.githooks/` runs the same suite on the build in `build/` and stops the push when a test fails.
+Activate it once per clone:
+
+```bash
+git config core.hooksPath .githooks
+```
+
 ---
 
 ## Usage
