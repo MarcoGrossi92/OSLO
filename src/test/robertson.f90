@@ -1,133 +1,97 @@
-! DEMONSTRATION PROGRAM.
-!
-! A classic example of a stiff system of ODEs is the kinetic analysis of Robertson's autocatalytic chemical reaction:
-! H. H. Robertson, The solution of a set of reaction rate equations, in J. Walsh (Ed.), 
-! Numerical Analysis: An Introduction, pp. 178–182, Academic Press, London (1966).
-! It consists of the following three rate equations:
-!    xdot = -0.04 * x + 1.e4 * y * z
-!    ydot = 0.04 * x - 1.e4 * y * z - 3.e7 * y**2
-!    zdot = 3.e7 * y**2
-! with initial conditions y1 = 1.0d0, y2 = y3 = 0.0d0. The problem is stiff.
-! Absolute tolleranvce is set much smaller for y than x or z because y has much smaller values.
+! Accuracy of every stiff solver on Robertson's problem (see oslo_test_support): the solution is checked at six times
+! from 0.4 to 4e10 against reference values computed independently of OSLO. Every solver must
+!   - return a successful status from each call,
+!   - stay within a multiple of the tolerance (rt |y| + at) of the reference, for each component and time,
+!   - keep y1 + y2 + y3 = 1, which the exact solution and every method in exact arithmetic do.
+! The bounds are an order of magnitude above what the solvers reach with gfortran. They are looser for the Rosenbrock
+! methods with a finite-difference Jacobian: their stages use the Jacobian itself, not only to iterate Newton, so its
+! error goes into the solution (with the analytical Jacobian they are as accurate as the others).
+! The solvers that accept an analytical Jacobian (IJAC = 1) are run with it as well.
 
-MODULE functions
-
-CONTAINS
-
-  SUBROUTINE Fgeneral(NEQ,T,Y,YDOT)
-    IMPLICIT NONE
-    INTEGER, INTENT (IN) :: NEQ
-    real(8), INTENT (IN) :: T
-    real(8), INTENT (IN) :: Y(NEQ)
-    real(8), INTENT (OUT) :: YDOT(NEQ)
-    YDOT(1) = -0.04d0*Y(1) + 1.d4*Y(2)*Y(3)
-    YDOT(2) = 0.04d0*Y(1) - 1.d4 *Y(2)*Y(3) - 3.d7 * Y(2)**2
-    YDOT(3) = 3.E7*Y(2)*Y(2)
-  END SUBROUTINE Fgeneral
-
-END MODULE functions
-
-
-PROGRAM RUNEXAMPLE1
+program robertson_test
   use oslo
-  use functions
+  use oslo_test_support
   implicit none
-  integer, parameter :: neq = 3
-  real(8) :: Y(neq), t, TOUT, tlimit
-  real(8) :: time1, time2, RT(neq), AT(neq)
-  character(len=30) :: Format
-  integer :: err, i, ntimes=10000
+  real(R8), parameter :: RT(NROB) = 1.e-6_R8
+  real(R8), parameter :: AT(NROB) = [1.e-12_R8, 1.e-18_R8, 1.e-12_R8]
+  real(R8), parameter :: MAX_RATIO = 50._R8, MAX_RATIO_ROS_FD = 2000._R8
+  real(R8), parameter :: INVARIANT_TOL = 1.e-10_R8, INVARIANT_TOL_ROS_FD = 1.e-7_R8
+  character(len=10), allocatable :: solvers(:)
+  integer :: i
 
-  RT = 1.d-4
-  AT = [1.D-8, 1.D-14, 1.D-6]
-  tlimit = 4.d+10
-  Format = '(A8,4E20.8)'
+  write(*,'(a10,a6,a14,a14)') 'solver', 'ijac', 'max err/tol', '|sum(y) - 1|'
 
-  call setup_odesolver(N=neq,solver='H-radau5',RT=RT,AT=AT)
-  call cpu_time(time1)
-  do i = 1, ntimes
-  call initialize
-  call run_odesolver(neq,T,TOUT,Y,Fgeneral,no_jacobian,0,err)
+  solvers = stiff_solvers()
+  do i = 1, size(solvers)
+    call run_robertson(trim(solvers(i)), 0)
   end do
-  call cpu_time(time2)
-  write(*,Format) 'H-radau5', time2-time1, Y(:)
 
-  call setup_odesolver(N=neq,solver='radau2a',RT=RT,AT=AT)
-  call cpu_time(time1)
-  do i = 1, ntimes
-  call initialize
-  call run_odesolver(neq,T,TOUT,Y,Fgeneral,no_jacobian,0,err)
+  solvers = hairer_jacobian_solvers()
+  do i = 1, size(solvers)
+    call run_robertson(trim(solvers(i)), 1)
   end do
-  call cpu_time(time2)
-  write(*,Format) 'radau2a', time2-time1, Y(:)
 
-  call setup_odesolver(N=neq,solver='H-rodas',RT=RT,AT=AT)
-  call cpu_time(time1)
-  do i = 1, ntimes
-  call initialize
-  call run_odesolver(neq,T,TOUT,Y,Fgeneral,no_jacobian,0,err)
-  end do
-  call cpu_time(time2)
-  write(*,Format) 'H-rodas', time2-time1, Y(:)
-
-  call setup_odesolver(N=neq,solver='rodas3',RT=RT,AT=AT)
-  call cpu_time(time1)
-  do i = 1, ntimes
-  call initialize
-  call run_odesolver(neq,T,TOUT,Y,Fgeneral,no_jacobian,0,err)
-  end do
-  call cpu_time(time2)
-  write(*,Format) 'rodas3', time2-time1, Y(:)
-
-  call setup_odesolver(N=neq,solver='H-sdirk4',RT=RT,AT=AT)
-  call cpu_time(time1)
-  do i = 1, ntimes
-  call initialize
-  call run_odesolver(neq,T,TOUT,Y,Fgeneral,no_jacobian,0,err)
-  end do
-  call cpu_time(time2)
-  write(*,Format) 'H-sdirk4', time2-time1, Y(:)
-
-  call setup_odesolver(N=neq,solver='sdirk4b',RT=RT,AT=AT)
-  call cpu_time(time1)
-  do i = 1, ntimes
-  call initialize
-  call run_odesolver(neq,T,TOUT,Y,Fgeneral,no_jacobian,0,err)
-  end do
-  call cpu_time(time2)
-  write(*,Format) 'sdirk4b', time2-time1, Y(:)
-
-# if defined(INTEL)
-  call setup_odesolver(N=neq,solver='dodesol',RT=RT,AT=AT)
-  call cpu_time(time1)
-  do i = 1, ntimes
-  call initialize
-  call run_odesolver(neq,T,TOUT,Y,Fgeneral,no_jacobian,0,err)
-  end do
-  call cpu_time(time2)
-  write(*,Format) 'dodesol', time2-time1, Y(:)
-# endif
-
-# if defined(SUNDIALS)
-  call setup_odesolver(N=neq,solver='cvode',RT=RT,AT=AT)
-  call cpu_time(time1)
-  do i = 1, ntimes
-  call initialize
-  call run_odesolver(neq,T,TOUT,Y,Fgeneral,no_jacobian,0,err)
-  end do
-  call cpu_time(time2)
-  write(*,Format) 'cvode', time2-time1, Y(:)
-# endif
+  call test_summary()
 
 contains
 
-  subroutine initialize()
-    implicit none
-    Y(1) = 1.0D0
-    Y(2) = 0.0D0
-    Y(3) = 0.0D0
-    T = 0.0D0
-    TOUT = tlimit
-  end subroutine
+  subroutine run_robertson(solver, ijac)
+    character(len=*), intent(in) :: solver
+    integer, intent(in) :: ijac
+    real(R8) :: y(NROB), t, tout, ratio, max_ratio_seen, drift, max_drift, ratio_bound, drift_bound
+    integer :: k, err
+    logical :: ok
+    character(len=64) :: label
 
-END PROGRAM RUNEXAMPLE1
+    ratio_bound = MAX_RATIO
+    drift_bound = INVARIANT_TOL
+    if (ijac == 0 .and. is_rosenbrock(solver)) then
+      ratio_bound = MAX_RATIO_ROS_FD
+      drift_bound = INVARIANT_TOL_ROS_FD
+    end if
+
+    call setup_odesolver(N=NROB, solver=solver, RT=RT, AT=AT)
+    y = [1._R8, 0._R8, 0._R8]
+    t = 0._R8
+    max_ratio_seen = 0._R8
+    max_drift = 0._R8
+    ok = .true.
+    do k = 1, size(ROB_TIMES)
+      tout = ROB_TIMES(k)
+      if (ijac == 1) then
+        call run_odesolver(NROB, t, tout, y, robertson, robertson_jac, 1, err)
+      else
+        call run_odesolver(NROB, t, tout, y, robertson, no_jacobian, 0, err)
+      end if
+      write(label,'(a,a,i0,a,es8.1)') solver, ' (ijac=', ijac, ') at t = ', ROB_TIMES(k)
+      ok = solver_succeeded(solver, err)
+      call check(ok, trim(label)//': status '//status_string(err))
+      if (.not. ok) exit
+      ratio = error_ratio(y, ROB_REF(:,k), RT, AT)
+      drift = abs(sum(y) - 1._R8)
+      call check(ratio <= ratio_bound, trim(label)//': error above the bound')
+      call check(drift <= drift_bound, trim(label)//': y1 + y2 + y3 drifted from 1')
+      max_ratio_seen = max(max_ratio_seen, ratio)
+      max_drift = max(max_drift, drift)
+      t = ROB_TIMES(k)
+    end do
+
+    if (ok) then
+      write(*,'(a10,i6,2es14.3)') solver, ijac, max_ratio_seen, max_drift
+    else
+      write(*,'(a10,i6,a)') solver, ijac, '        failed'
+    end if
+  end subroutine run_robertson
+
+  logical function is_rosenbrock(solver)
+    character(len=*), intent(in) :: solver
+    is_rosenbrock = any(solver == [character(len=8) :: 'H-rodas', 'ros2', 'ros3', 'ros4', 'rodas3', 'rodas4'])
+  end function is_rosenbrock
+
+  function status_string(err) result(s)
+    integer, intent(in) :: err
+    character(len=12) :: s
+    write(s,'(i0)') err
+  end function status_string
+
+end program robertson_test

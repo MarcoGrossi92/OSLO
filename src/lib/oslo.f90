@@ -459,7 +459,9 @@ recursive subroutine wrap_rodas(n,t1,t2,var,fcn,jac,IJAC,IDID,hmax,solout)
   integer :: IFCN, IDFX, IOUT
 
   h = 0.D0
-  IFCN = 0
+  ! fcn may depend on t: with IFCN=0 RODAS drops df/dt from its stages, which on a stiff non-autonomous problem makes
+  ! it fail. IDFX=0: df/dt by finite differences, one more call of fcn per step
+  IFCN = 1
   IDFX = 0
   IMAS = 0
   MLJAC = n
