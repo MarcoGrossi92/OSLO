@@ -110,11 +110,16 @@ contains
     real(R8), intent(in) :: yserial(:,:)
     integer, intent(in) :: thread(:)
     real(R8), target :: z(NROB,NCOPIES)
-    integer :: by_case(size(yserial,2)), by_thread(0:size(thread)-1), by_align(0:7)
-    integer :: i, nbad_layout, align, err
-    real(R8) :: worst
-    by_case = 0; by_thread = 0; by_align = 0
+    integer :: by_case(size(yserial,2)), by_thread(0:size(thread)-1), all_by_thread(0:size(thread)-1), by_align(0:7)
+    integer :: i, c, nbad_layout, align, err
+    real(R8) :: worst, serial_error, parallel_error
+    by_case = 0; by_thread = 0; all_by_thread = 0; by_align = 0
     worst = 0._R8
+    serial_error = 0._R8
+    parallel_error = 0._R8
+    do i = 1, NCOPIES
+      all_by_thread(thread(i)) = all_by_thread(thread(i)) + 1
+    end do
     do i = 1, NCOPIES
       if (all(y(:,i) == yserial(:,case_of(i)))) cycle
       align = int(mod(transfer(c_loc(y(1,i)), 0_c_intptr_t), 64_c_intptr_t)) / 8
@@ -122,7 +127,13 @@ contains
       by_thread(thread(i)) = by_thread(thread(i)) + 1
       by_align(align) = by_align(align) + 1
       worst = max(worst, error_ratio(y(:,i), yserial(:,case_of(i)), RT, AT))
+      if (solver /= 'H-dopri5') parallel_error = max(parallel_error, error_ratio(y(:,i), ROB_REF(:,case_of(i)), RT, AT))
     end do
+    if (solver /= 'H-dopri5') then
+      do c = 1, size(yserial,2)
+        serial_error = max(serial_error, error_ratio(yserial(:,c), ROB_REF(:,c), RT, AT))
+      end do
+    end if
     nbad_layout = 0
     do i = 1, NCOPIES
       call integrate_case(solver, ijac, case_of(i), z(:,i), err)
@@ -131,6 +142,11 @@ contains
     write(*,'(4x,a,es10.3)') 'largest difference, in units of the tolerance: ', worst
     write(*,'(4x,a,*(1x,i0))') 'differing copies by case:              ', by_case
     write(*,'(4x,a,*(1x,i0))') 'differing copies by thread:            ', by_thread(0:maxval(thread))
+    write(*,'(4x,a,*(1x,i0))') 'all copies by thread:                  ', all_by_thread(0:maxval(thread))
+    if (solver /= 'H-dopri5') then
+      write(*,'(4x,a,es10.3)') 'error of the serial runs against the reference, in tolerances:      ', serial_error
+      write(*,'(4x,a,es10.3)') 'error of the differing copies against the reference, in tolerances: ', parallel_error
+    end if
     write(*,'(4x,a,*(1x,i0))') 'differing copies by address mod 64 / 8:', by_align
     write(*,'(4x,a,i0,a,i0)')  'copies run again without threads, differing: ', nbad_layout, ' of ', NCOPIES
   end subroutine explain_differences
