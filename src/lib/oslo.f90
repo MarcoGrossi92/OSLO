@@ -254,15 +254,6 @@ contains
       if(solver=='sdirk4b')IWORK_global(3)=5
       run_odesolver => wrap_sdirk_FATODE
 
-#   if defined(INTEL)
-    case('dodesol')
-      LWORK = (7+2*n)*n
-      LIWORK = 128
-      allocate(IWORK_global(LIWORK))
-      IWORK_global = 0
-      run_odesolver => wrap_dodesol
-#   endif
-
 #   if defined(SUNDIALS)
     case('cvode')
       allocate(IWORK_global(1))
@@ -278,41 +269,6 @@ contains
     end select
 
   end subroutine setup_odesolver
-
-
-# if defined(INTEL)
-!> `jac`/`IJAC` are inert here: using them means switching from dodesol_mk52lfn
-!> to the analytic-Jacobian entry point dodesol_mk52lfa, a different call.
-recursive subroutine wrap_dodesol(n,t1,t2,var,fcn,jac,IJAC,ierr,hmax,solout)
-  use interface_definitions, only : solout_if, jac_if
-  implicit none
-  integer, intent(in)            :: n
-  real(R8), intent(inout)        :: t1, t2
-  real(R8), intent(inout)        :: var(n)
-  procedure(jac_if)              :: jac
-  integer, intent(in)            :: IJAC
-  integer, intent(out)           :: ierr
-  real(R8), intent(in), optional :: hmax
-  external :: fcn
-  procedure(solout_if), optional :: solout
-  ! specific
-  external :: dodesol_mk52lfn
-  real(R8) :: h
-  integer :: kd(n)
-  real(R8) :: hm, ep, tr
-  real(R8) :: dpar(LWORK)
-  integer :: ipar(LIWORK)
-  
-  h = 1.d-15
-  hm = 1.d-15
-  ep = minval(RTOL)
-  tr = minval(ATOL)
-  ipar = IWORK_global
-
-  call dodesol_mk52lfn(ipar,n,t1,t2,var,fcn,h,hm,ep,tr,dpar,kd,ierr)
-
-end subroutine wrap_dodesol
-# endif
 
 
 recursive subroutine wrap_sdirk4(n,t1,t2,var,fcn,jac,IJAC,IDID,hmax,solout)

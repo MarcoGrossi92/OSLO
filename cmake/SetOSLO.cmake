@@ -42,11 +42,6 @@ function(link_oslo_dependencies target)
     target_link_libraries(${target} PRIVATE ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
   endif()
 
-  if (UNIX AND NOT APPLE)
-    file(GLOB INTELODE "${CMAKE_CURRENT_SOURCE_DIR}/lib/Intel-ODE/lib/intel64/*")
-    target_link_libraries(${target} PRIVATE ${INTELODE})
-  endif()
-
   if (USE_SUNDIALS)
     target_link_libraries(${target}
       PRIVATE

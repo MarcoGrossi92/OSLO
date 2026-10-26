@@ -20,7 +20,6 @@ OSLO is designed for **scientific computing and HPC environments**, bundling wel
 
   * Hairer & Wanner solvers for stiff and non-stiff problems
   * **FATODE** with automatic differentiation
-  * **Intel ODE** (Linux only, Intel compiler)
   * **SUNDIALS** (CVODE, IDA, etc.)
 
 * **Parallel Execution**
@@ -207,9 +206,6 @@ gfortran your_program.o -Lbuild/lib -lOSLO -o your_program
 * **SUNDIALS**  
   © Lawrence Livermore National Laboratory — BSD license  
   [https://computing.llnl.gov/projects/sundials](https://computing.llnl.gov/projects/sundials)
-
-* **Intel ODE**  
-  Intel-optimized ODE solvers (Linux only)
 
 ---
 

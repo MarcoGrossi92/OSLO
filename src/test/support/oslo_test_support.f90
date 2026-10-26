@@ -62,9 +62,6 @@ contains
     list = [character(len=10) :: 'H-radau5', 'radau2a', 'lobatto3c', 'gauss', 'radau1a', &
                                  'H-rodas', 'ros2', 'ros3', 'ros4', 'rodas3', 'rodas4', &
                                  'H-sdirk4', 'sdirk2a', 'sdirk2b', 'sdirk3a', 'sdirk4a', 'sdirk4b']
-#   if defined(INTEL)
-    list = [character(len=10) :: list, 'dodesol']
-#   endif
 #   if defined(SUNDIALS)
     list = [character(len=10) :: list, 'cvode']
 #   endif
@@ -77,15 +74,13 @@ contains
   end function hairer_jacobian_solvers
 
   !> Whether the status that run_odesolver returned means success. Each family keeps its own convention: Hairer's
-  !> IDID and FATODE's IERR are positive on success, CVODE's flag is non-negative, dodesol's ierr is zero
+  !> IDID and FATODE's IERR are positive on success, CVODE's flag is non-negative
   logical function solver_succeeded(solver, err)
     character(len=*), intent(in) :: solver
     integer, intent(in) :: err
     select case (solver)
     case ('cvode')
       solver_succeeded = err >= 0
-    case ('dodesol')
-      solver_succeeded = err == 0
     case default
       solver_succeeded = err > 0
     end select

@@ -5,7 +5,7 @@
 !   - a solout that sets IRTRN < 0 stops the integration, which returns status 2 at the time it stopped, with the
 !     solution there;
 !   - the step limit IOPT(1): a solver that needs more steps returns a failure, which shows that the solvers do report
-!     one (cvode and dodesol do not take the limit from IOPT).
+!     one (cvode does not take the limit from IOPT).
 
 module solout_recorder
   use oslo_test_support, only : R8
@@ -69,7 +69,7 @@ program options_test
   call check_step_limit('H-dopri5')
   solvers = stiff_solvers()
   do i = 1, size(solvers)
-    if (solvers(i) == 'cvode' .or. solvers(i) == 'dodesol') cycle
+    if (solvers(i) == 'cvode') cycle
     call check_step_limit(trim(solvers(i)))
   end do
 

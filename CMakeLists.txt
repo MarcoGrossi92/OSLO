@@ -31,12 +31,6 @@ set(CMAKE_Fortran_MODULE_DIRECTORY "${CMAKE_BINARY_DIR}/modules")
 # Define third-party libs
 # ------------------------------
 
-# Intel-ODE
-if(UNIX AND NOT APPLE)
-  add_compile_definitions(INTEL)
-  file(GLOB INTELODE "${CMAKE_CURRENT_SOURCE_DIR}/lib/Intel-ODE/lib/intel64/*")
-endif()
-
 # SUNDIALS
 OPTION(USE_SUNDIALS "Use Sundials suite of solvers" ON)
 # The SUNDIALS installation, built from lib/sundials when it is missing or stale: by default sundials-install in these

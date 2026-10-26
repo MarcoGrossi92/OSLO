@@ -23,7 +23,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Everything on: OpenMP (robertsonOMP) and SUNDIALS (cvode); on Linux dodesol from Intel-ODE as well
+          # Everything on: OpenMP (robertsonOMP) and SUNDIALS (cvode)
           - name: gfortran, OpenMP, SUNDIALS
             compiler: gnu
             openmp: ON
