@@ -150,6 +150,9 @@ Each program checks its results and stops with a nonzero exit status when one is
 | `OSLO.options`        | `solout`, `hmax`, interrupting from `solout`, and the failure status when the step limit is reached   |
 | `OSLO.robertsonOMP`   | (with OpenMP) every solver from a parallel region on 4 threads: each result equal to the serial one   |
 
+GitHub Actions (`.github/workflows/tests.yml`) builds OSLO and runs the suite on every pull request into `main`, in
+three configurations: gfortran with OpenMP and SUNDIALS, gfortran without either, and ifx with OpenMP and SUNDIALS.
+
 The pre-push hook in `.githooks/` runs the same suite on the build in `build/` and stops the push when a test fails.
 Activate it once per clone:
 

@@ -1,0 +1,103 @@
+name: Tests
+
+# Builds OSLO and runs the CTest suite (src/test) on every pull request into main: when it is opened, reopened or
+# updated with new commits.
+on:
+  pull_request:
+    branches: [ main ]
+    paths-ignore: [ '**.md', 'LICENSE', 'licenses/**' ]
+
+permissions:
+  contents: read
+
+# A newer commit on the same pull request cancels the run of the previous one
+concurrency:
+  group: tests-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Everything on: OpenMP (robertsonOMP) and SUNDIALS (cvode); on Linux dodesol from Intel-ODE as well
+          - name: gfortran, OpenMP, SUNDIALS
+            compiler: gnu
+            openmp: ON
+            sundials: ON
+          # The code paths without OpenMP and SUNDIALS
+          - name: gfortran, serial, no SUNDIALS
+            compiler: gnu
+            openmp: OFF
+            sundials: OFF
+          # ifx and icx, without system BLAS/LAPACK: the LAPACK routines bundled with FATODE
+          - name: ifx, OpenMP, SUNDIALS
+            compiler: intel
+            openmp: ON
+            sundials: ON
+
+    steps:
+      # Without submodules: lib/sundials is cloned at configure time, only when SUNDIALS has to be built
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install GNU compilers and libraries
+        if: matrix.compiler == 'gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gfortran libblas-dev liblapack-dev
+          echo "FC=gfortran" >> "$GITHUB_ENV"
+          echo "CC=gcc" >> "$GITHUB_ENV"
+
+      - name: Install Intel compilers
+        if: matrix.compiler == 'intel'
+        run: |
+          wget -qO- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB \
+            | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
+          echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" \
+            | sudo tee /etc/apt/sources.list.d/oneAPI.list
+          sudo apt-get update
+          sudo apt-get install -y intel-oneapi-compiler-fortran intel-oneapi-compiler-dpcpp-cpp
+          # The environment of the compilers, for the next steps
+          source /opt/intel/oneapi/setvars.sh
+          for var in PATH LD_LIBRARY_PATH LIBRARY_PATH CPATH CMPLR_ROOT ONEAPI_ROOT; do
+            echo "$var=${!var}" >> "$GITHUB_ENV"
+          done
+          echo "FC=ifx" >> "$GITHUB_ENV"
+          echo "CC=icx" >> "$GITHUB_ENV"
+
+      # The SUNDIALS commit that OSLO records and the compilers: what the stamp of a SUNDIALS installation holds
+      # (CMakeLists.txt), so that the cache is reused only where OSLO would reuse the installation
+      - name: Identify SUNDIALS build
+        id: sundials
+        if: matrix.sundials == 'ON'
+        run: |
+          echo "commit=$(git rev-parse HEAD:lib/sundials)" >> "$GITHUB_OUTPUT"
+          echo "compilers=$( ($FC --version; $CC --version) | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache SUNDIALS
+        if: matrix.sundials == 'ON'
+        uses: actions/cache@v4
+        with:
+          path: build-deps/sundials
+          key: sundials-${{ runner.os }}-${{ matrix.compiler }}-openmp${{ matrix.openmp }}-${{ steps.sundials.outputs.commit }}-${{ steps.sundials.outputs.compilers }}
+
+      - name: Configure
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=RELEASE \
+            -DCMAKE_Fortran_COMPILER="$FC" \
+            -DCMAKE_C_COMPILER="$CC" \
+            -DUSE_OPENMP=${{ matrix.openmp }} \
+            -DUSE_MPI=OFF \
+            -DUSE_SUNDIALS=${{ matrix.sundials }} \
+            -DOSLO_SUNDIALS_DIR="$PWD/build-deps/sundials"
+
+      - name: Build
+        run: cmake --build build --parallel "$(nproc)"
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure --timeout 300
