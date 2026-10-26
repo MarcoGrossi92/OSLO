@@ -4,7 +4,7 @@
 ! status when a check failed, so that ctest reports the test as failed.
 
 module oslo_test_support
-  use, intrinsic :: iso_fortran_env, only : R8 => real64
+  use, intrinsic :: iso_fortran_env, only : R8 => real64, int64
   implicit none
   private
   public :: R8
@@ -86,13 +86,20 @@ contains
     end select
   end function solver_succeeded
 
-  !> The largest error of y against yref in units of the tolerance, |y - yref| / (rt |yref| + at); a NaN gives a huge
-  !> value, so that it fails any bound
+  !> The largest error of y against yref in units of the tolerance, |y - yref| / (rt |yref| + at); a NaN or an
+  !> infinity in y gives a huge value, so that it fails any bound
   real(R8) function error_ratio(y, yref, rt, at)
     real(R8), intent(in) :: y(:), yref(:), rt(:), at(:)
     error_ratio = maxval(abs(y - yref) / (rt*abs(yref) + at))
-    if (error_ratio /= error_ratio) error_ratio = huge(1._R8)
+    if (any(not_finite(y))) error_ratio = huge(1._R8)
   end function error_ratio
+
+  !> Whether x is a NaN or an infinity, from its exponent bits: the release flags (-ffast-math, -fp-model fast) let the
+  !> compiler assume that no value is a NaN and drop a test such as x /= x
+  elemental logical function not_finite(x)
+    real(R8), intent(in) :: x
+    not_finite = iand(shiftr(transfer(x, 0_int64), 52), 2047_int64) == 2047_int64
+  end function not_finite
 
   subroutine robertson(neq, t, y, ydot)
     integer, intent(in) :: neq
