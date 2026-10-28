@@ -222,6 +222,13 @@ contains
       run_odesolver => wrap_rodas
 
     case('ros2','ros3','ros4','rodas3','rodas4')
+#     if defined(FATODE_ROS_DISABLED)
+      ! Built by ifx with OpenMP they return wrong results from parallel regions (see CMakeLists.txt)
+      write(*,'(a)') trim(solver)//' is disabled in this build: built by ifx with OpenMP, FATODE''s Rosenbrock '// &
+                     'solvers can return wrong results from OpenMP parallel regions. H-rodas (Hairer''s RODAS, '// &
+                     'the method of rodas4) is not affected'
+      error stop 1
+#     endif
       allocate(IWORK_global(NNZERO+1))
       IWORK_global = 0
       IWORK_global(4) = Nsteps

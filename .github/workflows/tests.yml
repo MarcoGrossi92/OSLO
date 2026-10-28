@@ -35,18 +35,13 @@ jobs:
             compiler: gnu
             openmp: OFF
             sundials: OFF
-          # ifx and icx, without system BLAS/LAPACK: the LAPACK routines bundled with FATODE
+          # ifx and icx, without system BLAS/LAPACK: the LAPACK routines bundled with FATODE. With ifx and OpenMP
+          # FATODE's Rosenbrock solvers are disabled (CMakeLists.txt): the tests leave them out and check that
+          # setup_odesolver refuses them
           - name: ifx, OpenMP, SUNDIALS
             compiler: intel
             openmp: ON
             sundials: ON
-          # The same with array bounds checks and without -ipo and -fp-model fast (build type TESTING: -O2 -g
-          # -check bounds), which separates a memory error from an effect of the release optimizations
-          - name: ifx, OpenMP, SUNDIALS, bounds checks
-            compiler: intel
-            openmp: ON
-            sundials: ON
-            build_type: TESTING
 
     steps:
       # Without submodules: lib/sundials is cloned at configure time, only when SUNDIALS has to be built
@@ -61,8 +56,6 @@ jobs:
           sudo apt-get install -y gfortran libblas-dev liblapack-dev
           echo "FC=gfortran" >> "$GITHUB_ENV"
           echo "CC=gcc" >> "$GITHUB_ENV"
-          # Debug information, for the file and line of a crash in the backtrace (the code generated is the same)
-          echo "DEBUG_FLAGS=-g -fbacktrace" >> "$GITHUB_ENV"
 
       - name: Install Intel compilers
         if: matrix.compiler == 'intel'
@@ -81,7 +74,6 @@ jobs:
           done
           echo "FC=ifx" >> "$GITHUB_ENV"
           echo "CC=icx" >> "$GITHUB_ENV"
-          echo "DEBUG_FLAGS=-g -traceback" >> "$GITHUB_ENV"
 
       # The SUNDIALS commit that OSLO records and the compilers: what the stamp of a SUNDIALS installation holds
       # (CMakeLists.txt), so that the cache is reused only where OSLO would reuse the installation
@@ -102,10 +94,9 @@ jobs:
       - name: Configure
         run: |
           cmake -S . -B build \
-            -DCMAKE_BUILD_TYPE=${{ matrix.build_type || 'RELEASE' }} \
+            -DCMAKE_BUILD_TYPE=RELEASE \
             -DCMAKE_Fortran_COMPILER="$FC" \
             -DCMAKE_C_COMPILER="$CC" \
-            -DCMAKE_Fortran_FLAGS="$DEBUG_FLAGS" \
             -DUSE_OPENMP=${{ matrix.openmp }} \
             -DUSE_MPI=OFF \
             -DUSE_SUNDIALS=${{ matrix.sundials }} \

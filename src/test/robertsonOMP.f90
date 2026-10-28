@@ -6,7 +6,6 @@
 ! the oscillator. The test fails if it runs on one thread only.
 
 program robertsonOMP_test
-  use, intrinsic :: iso_c_binding, only : c_loc, c_intptr_t
   use omp_lib
   use oslo
   use oslo_test_support
@@ -63,9 +62,8 @@ contains
     character(len=*), intent(in) :: solver
     integer, intent(in) :: ijac
     integer, parameter :: NCASES = size(ROB_TIMES)
-    real(R8) :: yserial(NROB,NCASES)
-    real(R8), target :: y(NROB,NCOPIES)
-    integer :: err(NCOPIES), thread(NCOPIES), err_serial, c, i, nbad_status, nbad_value
+    real(R8) :: yserial(NROB,NCASES), y(NROB,NCOPIES)
+    integer :: err(NCOPIES), err_serial, c, i, nbad_status, nbad_value
     character(len=64) :: label
 
     write(label,'(a,a,i0,a)') solver, ' (ijac=', ijac, ')'
@@ -83,7 +81,6 @@ contains
     !$omp parallel do schedule(dynamic,1) default(shared) private(i)
     do i = 1, NCOPIES
       call integrate_case(solver, ijac, case_of(i), y(:,i), err(i))
-      thread(i) = omp_get_thread_num()
     end do
     !$omp end parallel do
 
@@ -97,59 +94,7 @@ contains
                                        nbad_value, ' differing from the serial run'
     call check(nbad_status == 0, trim(label)//': concurrent runs unsuccessful')
     call check(nbad_value == 0, trim(label)//': concurrent runs differ from the serial run')
-    if (nbad_value > 0) call explain_differences(solver, ijac, y, yserial, thread)
   end subroutine run_concurrent
-
-  !> What the differing copies have in common: their case, their thread, the alignment of their solution vector.
-  !> The copies are also run again without threads, in an array laid out as y: if these differ as well, the results
-  !> depend on where the solution vector lies in memory, not on the threads
-  subroutine explain_differences(solver, ijac, y, yserial, thread)
-    character(len=*), intent(in) :: solver
-    integer, intent(in) :: ijac
-    real(R8), intent(in), target :: y(:,:)
-    real(R8), intent(in) :: yserial(:,:)
-    integer, intent(in) :: thread(:)
-    real(R8), target :: z(NROB,NCOPIES)
-    integer :: by_case(size(yserial,2)), by_thread(0:size(thread)-1), all_by_thread(0:size(thread)-1), by_align(0:7)
-    integer :: i, c, nbad_layout, align, err
-    real(R8) :: worst, serial_error, parallel_error
-    by_case = 0; by_thread = 0; all_by_thread = 0; by_align = 0
-    worst = 0._R8
-    serial_error = 0._R8
-    parallel_error = 0._R8
-    do i = 1, NCOPIES
-      all_by_thread(thread(i)) = all_by_thread(thread(i)) + 1
-    end do
-    do i = 1, NCOPIES
-      if (all(y(:,i) == yserial(:,case_of(i)))) cycle
-      align = int(mod(transfer(c_loc(y(1,i)), 0_c_intptr_t), 64_c_intptr_t)) / 8
-      by_case(case_of(i)) = by_case(case_of(i)) + 1
-      by_thread(thread(i)) = by_thread(thread(i)) + 1
-      by_align(align) = by_align(align) + 1
-      worst = max(worst, error_ratio(y(:,i), yserial(:,case_of(i)), RT, AT))
-      if (solver /= 'H-dopri5') parallel_error = max(parallel_error, error_ratio(y(:,i), ROB_REF(:,case_of(i)), RT, AT))
-    end do
-    if (solver /= 'H-dopri5') then
-      do c = 1, size(yserial,2)
-        serial_error = max(serial_error, error_ratio(yserial(:,c), ROB_REF(:,c), RT, AT))
-      end do
-    end if
-    nbad_layout = 0
-    do i = 1, NCOPIES
-      call integrate_case(solver, ijac, case_of(i), z(:,i), err)
-      if (any(z(:,i) /= yserial(:,case_of(i)))) nbad_layout = nbad_layout + 1
-    end do
-    write(*,'(4x,a,es10.3)') 'largest difference, in units of the tolerance: ', worst
-    write(*,'(4x,a,*(1x,i0))') 'differing copies by case:              ', by_case
-    write(*,'(4x,a,*(1x,i0))') 'differing copies by thread:            ', by_thread(0:maxval(thread))
-    write(*,'(4x,a,*(1x,i0))') 'all copies by thread:                  ', all_by_thread(0:maxval(thread))
-    if (solver /= 'H-dopri5') then
-      write(*,'(4x,a,es10.3)') 'error of the serial runs against the reference, in tolerances:      ', serial_error
-      write(*,'(4x,a,es10.3)') 'error of the differing copies against the reference, in tolerances: ', parallel_error
-    end if
-    write(*,'(4x,a,*(1x,i0))') 'differing copies by address mod 64 / 8:', by_align
-    write(*,'(4x,a,i0,a,i0)')  'copies run again without threads, differing: ', nbad_layout, ' of ', NCOPIES
-  end subroutine explain_differences
 
   integer function case_of(i)
     integer, intent(in) :: i

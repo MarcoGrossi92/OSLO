@@ -72,6 +72,12 @@ OSLO has been tested on the following configurations:
 
 The toolbox is expected to work on most Unix-like systems with a compatible Fortran compiler.
 
+**Known limitation: ifx with OpenMP.** Built by ifx (Intel) with OpenMP, FATODE's Rosenbrock solvers (`ros2`, `ros3`,
+`ros4`, `rodas3`, `rodas4`) returned wrong results, with a successful status, when called from OpenMP parallel regions.
+Until the cause is found, these builds disable them: `setup_odesolver` stops with an error for any of them. `H-rodas`
+(Hairer's RODAS, the method of `rodas4`) and the other solvers are not affected. Builds with gfortran, or with ifx
+without OpenMP, keep all the solvers.
+
 ---
 
 ## Installation
@@ -148,6 +154,7 @@ Each program checks its results and stops with a nonzero exit status when one is
 | `OSLO.exact_solutions`| Every solver on problems with a known solution: Prothero-Robinson (stiff) and the harmonic oscillator |
 | `OSLO.options`        | `solout`, `hmax`, interrupting from `solout`, and the failure status when the step limit is reached   |
 | `OSLO.robertsonOMP`   | (with OpenMP) every solver from a parallel region on 4 threads: each result equal to the serial one   |
+| `OSLO.fatode_ros_disabled.*` | (ifx with OpenMP) `setup_odesolver` refuses each of FATODE's Rosenbrock solvers               |
 
 GitHub Actions (`.github/workflows/tests.yml`) builds OSLO and runs the suite on every pull request into `main`, in
 three configurations: gfortran with OpenMP and SUNDIALS, gfortran without either, and ifx with OpenMP and SUNDIALS.

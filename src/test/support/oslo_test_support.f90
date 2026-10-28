@@ -56,12 +56,15 @@ contains
     if (nfailed > 0) error stop 1
   end subroutine test_summary
 
-  !> The solvers for stiff problems that this build provides: all but the explicit H-dopri5
+  !> The solvers for stiff problems that this build provides: all but the explicit H-dopri5 and, in the builds that
+  !> disable them (ifx with OpenMP, see CMakeLists.txt), FATODE's Rosenbrock solvers
   function stiff_solvers() result(list)
     character(len=10), allocatable :: list(:)
-    list = [character(len=10) :: 'H-radau5', 'radau2a', 'lobatto3c', 'gauss', 'radau1a', &
-                                 'H-rodas', 'ros2', 'ros3', 'ros4', 'rodas3', 'rodas4', &
+    list = [character(len=10) :: 'H-radau5', 'radau2a', 'lobatto3c', 'gauss', 'radau1a', 'H-rodas', &
                                  'H-sdirk4', 'sdirk2a', 'sdirk2b', 'sdirk3a', 'sdirk4a', 'sdirk4b']
+#   if !defined(FATODE_ROS_DISABLED)
+    list = [character(len=10) :: list, 'ros2', 'ros3', 'ros4', 'rodas3', 'rodas4']
+#   endif
 #   if defined(SUNDIALS)
     list = [character(len=10) :: list, 'cvode']
 #   endif

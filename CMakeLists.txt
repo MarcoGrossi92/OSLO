@@ -117,6 +117,16 @@ if (USE_SUNDIALS)
   add_compile_definitions(SUNDIALS)
 endif(USE_SUNDIALS)
 
+# FATODE's Rosenbrock solvers (ros2, ros3, ros4, rodas3, rodas4) built by ifx with OpenMP: called from an OpenMP
+# parallel region they returned wrong results with a successful status (RELEASE build; which solver depends on the CPU,
+# through -xHost; the cause is not found). In these builds setup_odesolver refuses them; this block goes once ifx
+# builds them correctly
+if (USE_OPENMP AND CMAKE_Fortran_COMPILER_ID STREQUAL "IntelLLVM")
+  set(FATODE_ROS_DISABLED ON)
+  add_compile_definitions(FATODE_ROS_DISABLED)
+  message(STATUS "ifx with OpenMP: FATODE's Rosenbrock solvers (ros2, ros3, ros4, rodas3, rodas4) are disabled")
+endif()
+
 # -----------------------------
 # Build library
 # ------------------------------
