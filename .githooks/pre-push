@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+
+# Git pre-push hook — runs the full CTest suite before allowing a push.
+#
+# Activate with:
+#   git config core.hooksPath .githooks
+
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+BUILD_DIR="${REPO_ROOT}/build"
+
+if [[ ! -f "${BUILD_DIR}/CMakeCache.txt" ]]; then
+    echo "[pre-push] No configured CMake build found at ${BUILD_DIR}."
+    echo "[pre-push] Configure and build before pushing:"
+    echo "[pre-push]   cmake --preset default"
+    echo "[pre-push]   cmake --build build"
+    exit 1
+fi
+
+echo "[pre-push] Running full CTest suite..."
+
+if ctest \
+    --test-dir "${BUILD_DIR}" \
+    --output-on-failure \
+    --timeout 120
+then
+    echo "[pre-push] All tests passed."
+else
+    echo "[pre-push] Tests FAILED — push aborted."
+    exit 1
+fi

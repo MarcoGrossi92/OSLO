@@ -1,0 +1,122 @@
+name: Tests
+
+# Builds OSLO and runs the CTest suite (src/test) on every pull request into main: when it is opened, reopened or
+# updated with new commits.
+on:
+  pull_request:
+    branches: [ main ]
+    paths-ignore: [ '**.md', 'LICENSE', 'licenses/**' ]
+
+permissions:
+  contents: read
+
+# A newer commit on the same pull request cancels the run of the previous one
+concurrency:
+  group: tests-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-24.04
+    # A hung job (a stalled package download, a deadlock in a test) fails after this instead of GitHub's 6 hours
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Everything on: OpenMP (robertsonOMP) and SUNDIALS (cvode)
+          - name: gfortran, OpenMP, SUNDIALS
+            compiler: gnu
+            openmp: ON
+            sundials: ON
+          # The code paths without OpenMP and SUNDIALS
+          - name: gfortran, serial, no SUNDIALS
+            compiler: gnu
+            openmp: OFF
+            sundials: OFF
+          # ifx and icx, without system BLAS/LAPACK: the LAPACK routines bundled with FATODE. With ifx and OpenMP
+          # FATODE's Rosenbrock solvers are disabled (CMakeLists.txt): the tests leave them out and check that
+          # setup_odesolver refuses them
+          - name: ifx, OpenMP, SUNDIALS
+            compiler: intel
+            openmp: ON
+            sundials: ON
+
+    steps:
+      # Without submodules: lib/sundials is cloned at configure time, only when SUNDIALS has to be built
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Install GNU compilers and libraries
+        if: matrix.compiler == 'gnu'
+        timeout-minutes: 10
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gfortran libblas-dev liblapack-dev
+          echo "FC=gfortran" >> "$GITHUB_ENV"
+          echo "CC=gcc" >> "$GITHUB_ENV"
+
+      - name: Install Intel compilers
+        if: matrix.compiler == 'intel'
+        timeout-minutes: 10
+        run: |
+          wget -qO- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB \
+            | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
+          echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" \
+            | sudo tee /etc/apt/sources.list.d/oneAPI.list
+          sudo apt-get update
+          sudo apt-get install -y intel-oneapi-compiler-fortran intel-oneapi-compiler-dpcpp-cpp
+          # The environment of the compilers, for the next steps
+          source /opt/intel/oneapi/setvars.sh
+          for var in PATH LD_LIBRARY_PATH LIBRARY_PATH CPATH CMPLR_ROOT ONEAPI_ROOT; do
+            echo "$var=${!var}" >> "$GITHUB_ENV"
+          done
+          echo "FC=ifx" >> "$GITHUB_ENV"
+          echo "CC=icx" >> "$GITHUB_ENV"
+
+      # The SUNDIALS commit that OSLO records and the compilers: what the stamp of a SUNDIALS installation holds
+      # (CMakeLists.txt), so that the cache is reused only where OSLO would reuse the installation
+      - name: Identify SUNDIALS build
+        id: sundials
+        if: matrix.sundials == 'ON'
+        run: |
+          echo "commit=$(git rev-parse HEAD:lib/sundials)" >> "$GITHUB_OUTPUT"
+          echo "compilers=$( ($FC --version; $CC --version) | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache SUNDIALS
+        if: matrix.sundials == 'ON'
+        uses: actions/cache@v5
+        with:
+          path: build-deps/sundials
+          key: sundials-${{ runner.os }}-${{ matrix.compiler }}-openmp${{ matrix.openmp }}-${{ steps.sundials.outputs.commit }}-${{ steps.sundials.outputs.compilers }}
+
+      - name: Configure
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=RELEASE \
+            -DCMAKE_Fortran_COMPILER="$FC" \
+            -DCMAKE_C_COMPILER="$CC" \
+            -DUSE_OPENMP=${{ matrix.openmp }} \
+            -DUSE_MPI=OFF \
+            -DUSE_SUNDIALS=${{ matrix.sundials }} \
+            -DOSLO_SUNDIALS_DIR="$PWD/build-deps/sundials"
+
+      - name: Build
+        run: cmake --build build --parallel "$(nproc)"
+
+      # Each test up to three times, until it fails: a race between threads may not show in one run. On failure, the
+      # output of the failed tests (ctest prints it) also goes into one annotation, which the pull request shows
+      # without opening the log
+      - name: Test
+        run: |
+          # The status of ctest, not of tee: a run step has no pipefail unless it sets shell: bash
+          ctest --test-dir build --output-on-failure --timeout 300 --repeat until-fail:3 2>&1 | tee ctest.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            output=$(sed -n '/^Test project/,$p' ctest.log | tail -n 300 | sed 's/%/%25/g;s/\r/%0D/g' \
+                     | awk 'BEGIN { ORS = "%0A" } 1')
+            title=$(echo "CTest failures (${{ matrix.name }})" | sed 's/%/%25/g;s/,/%2C/g;s/:/%3A/g')
+            echo "::error title=${title}::${output}"
+          fi
+          exit "$status"

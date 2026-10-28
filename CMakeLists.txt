@@ -31,44 +31,60 @@ set(CMAKE_Fortran_MODULE_DIRECTORY "${CMAKE_BINARY_DIR}/modules")
 # Define third-party libs
 # ------------------------------
 
-# Intel-ODE
-if(UNIX AND NOT APPLE)
-  add_compile_definitions(INTEL)
-  file(GLOB INTELODE "${CMAKE_CURRENT_SOURCE_DIR}/lib/Intel-ODE/lib/intel64/*")
-endif()
-
 # SUNDIALS
 OPTION(USE_SUNDIALS "Use Sundials suite of solvers" ON)
+# The SUNDIALS installation, built from lib/sundials when it is missing or stale: by default sundials-install in these
+# sources. A folder outside them keeps SUNDIALS for the next copy of OSLO (a project that fetches OSLO clones it in
+# each of its build trees)
+set(OSLO_SUNDIALS_DIR "" CACHE PATH "SUNDIALS installation (empty: sundials-install in OSLO's sources)")
 if (USE_SUNDIALS)
-  set(SUNDIALS_INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sundials-install")
-  # Check if cloned
-  if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lib/sundials/CMakeLists.txt")
-    message(STATUS "Sundials not found. Attempting to initialize...")
-    execute_process(COMMAND git submodule update --init --recursive
-                    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-                    RESULT_VARIABLE GIT_SUBMOD_RESULT)
-    if(NOT GIT_SUBMOD_RESULT EQUAL 0)
-      message(FATAL_ERROR "Failed to initialize git submodules.")
-    endif()
+  if (OSLO_SUNDIALS_DIR)
+    set(SUNDIALS_INSTALL_DIR "${OSLO_SUNDIALS_DIR}")
+  else()
+    set(SUNDIALS_INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/sundials-install")
   endif()
   # Check if already installed
   set(SUNDIALS_CONFIG_FILE "${SUNDIALS_INSTALL_DIR}/${CMAKE_INSTALL_LIBDIR}/cmake/sundials/SUNDIALSConfig.cmake")
   # The SUNDIALS Fortran interface modules are called from inside the caller's
   # OpenMP parallel regions: build them with the OpenMP flag, otherwise ifx makes
   # their derived-type locals (the c_ptr argument wrappers) static and shared by
-  # all threads. The flags are stamped into the install so that an install built
-  # with different flags is rebuilt.
+  # all threads.
   set(SUNDIALS_Fortran_FLAGS "")
   if (USE_OPENMP)
     set(SUNDIALS_Fortran_FLAGS "${OpenMP_Fortran_FLAGS}")
   endif()
-  set(SUNDIALS_FLAGS_STAMP "${SUNDIALS_INSTALL_DIR}/oslo-fortran-flags.txt")
-  set(SUNDIALS_INSTALLED_FLAGS "<none>")
-  if(EXISTS "${SUNDIALS_FLAGS_STAMP}")
-    file(READ "${SUNDIALS_FLAGS_STAMP}" SUNDIALS_INSTALLED_FLAGS)
+  # The stamp of the install: the SUNDIALS commit OSLO records (readable without the submodule), the compilers and
+  # the flags. An install with another stamp (another SUNDIALS, compiler or flags) is rebuilt
+  execute_process(COMMAND git rev-parse HEAD:lib/sundials
+                  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                  OUTPUT_VARIABLE SUNDIALS_COMMIT OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+  set(SUNDIALS_STAMP "sundials ${SUNDIALS_COMMIT}\n"
+                     "C ${CMAKE_C_COMPILER_ID} ${CMAKE_C_COMPILER_VERSION}\n"
+                     "Fortran ${CMAKE_Fortran_COMPILER_ID} ${CMAKE_Fortran_COMPILER_VERSION} ${SUNDIALS_Fortran_FLAGS}\n")
+  string(CONCAT SUNDIALS_STAMP ${SUNDIALS_STAMP})
+  set(SUNDIALS_STAMP_FILE "${SUNDIALS_INSTALL_DIR}/oslo-stamp.txt")
+  set(SUNDIALS_INSTALLED_STAMP "<none>")
+  if(EXISTS "${SUNDIALS_STAMP_FILE}")
+    file(READ "${SUNDIALS_STAMP_FILE}" SUNDIALS_INSTALLED_STAMP)
   endif()
-  if(NOT EXISTS "${SUNDIALS_CONFIG_FILE}" OR NOT SUNDIALS_INSTALLED_FLAGS STREQUAL SUNDIALS_Fortran_FLAGS)
-    message(STATUS "SUNDIALS not installed (or built with other Fortran flags), building and installing it...")
+  if(NOT EXISTS "${SUNDIALS_CONFIG_FILE}" OR NOT SUNDIALS_INSTALLED_STAMP STREQUAL SUNDIALS_STAMP)
+    message(STATUS "SUNDIALS not installed (or built from other sources, compilers or flags), building and installing it...")
+
+    # The sources, only to build them: shallow, without the submodules of SUNDIALS (CI configurations, test answers)
+    if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lib/sundials/CMakeLists.txt")
+      message(STATUS "Sundials not found. Attempting to initialize...")
+      execute_process(COMMAND git submodule update --init --depth 1 lib/sundials
+                      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                      RESULT_VARIABLE GIT_SUBMOD_RESULT)
+      if(NOT GIT_SUBMOD_RESULT EQUAL 0)
+        execute_process(COMMAND git submodule update --init lib/sundials
+                        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                        RESULT_VARIABLE GIT_SUBMOD_RESULT)
+      endif()
+      if(NOT GIT_SUBMOD_RESULT EQUAL 0)
+        message(FATAL_ERROR "Failed to initialize git submodules.")
+      endif()
+    endif()
 
     # Build SUNDIALS in a temporary build directory
     execute_process(COMMAND ${CMAKE_COMMAND} -S ${CMAKE_CURRENT_SOURCE_DIR}/lib/sundials
@@ -95,11 +111,21 @@ if (USE_SUNDIALS)
     if(NOT BUILD_RESULT EQUAL 0)
       message(FATAL_ERROR "Failed to build and install SUNDIALS")
     endif()
-    file(WRITE "${SUNDIALS_FLAGS_STAMP}" "${SUNDIALS_Fortran_FLAGS}")
+    file(WRITE "${SUNDIALS_STAMP_FILE}" "${SUNDIALS_STAMP}")
   endif()
   find_package(SUNDIALS REQUIRED PATHS ${SUNDIALS_INSTALL_DIR} NO_DEFAULT_PATH)
   add_compile_definitions(SUNDIALS)
 endif(USE_SUNDIALS)
+
+# FATODE's Rosenbrock solvers (ros2, ros3, ros4, rodas3, rodas4) built by ifx with OpenMP: called from an OpenMP
+# parallel region they returned wrong results with a successful status (RELEASE build; which solver depends on the CPU,
+# through -xHost; the cause is not found). In these builds setup_odesolver refuses them; this block goes once ifx
+# builds them correctly
+if (USE_OPENMP AND CMAKE_Fortran_COMPILER_ID STREQUAL "IntelLLVM")
+  set(FATODE_ROS_DISABLED ON)
+  add_compile_definitions(FATODE_ROS_DISABLED)
+  message(STATUS "ifx with OpenMP: FATODE's Rosenbrock solvers (ros2, ros3, ros4, rodas3, rodas4) are disabled")
+endif()
 
 # -----------------------------
 # Build library
@@ -111,6 +137,9 @@ find_package(LAPACK)
 gather_oslo_files(OSLO_SRC)
 add_library(OSLO ${OSLO_SRC})
 link_oslo_dependencies(OSLO)
+if (USE_SUNDIALS)
+  set_target_properties(OSLO PROPERTIES OSLO_SUNDIALS_DIR "${SUNDIALS_INSTALL_DIR}")
+endif()
 
 # ------------------------------
 # Build tests and applications
@@ -119,6 +148,7 @@ link_oslo_dependencies(OSLO)
 # Build tests and applications only if OSLO build has not been called by another program
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   message("-- Full build allowed")
+  enable_testing()
   add_subdirectory(src/test)
 endif()
 

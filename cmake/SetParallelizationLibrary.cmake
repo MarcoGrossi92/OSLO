@@ -1,13 +1,11 @@
 # Turns on either OpenMP and/or MPI
 
 IF (USE_OPENMP)
-    # Find OpenMP
-    IF (NOT OpenMP_Fortran_FLAGS)
-        FIND_PACKAGE (OpenMP_Fortran)
-        IF (NOT OpenMP_Fortran_FLAGS)
-            MESSAGE (FATAL_ERROR "Fortran compiler does not support OpenMP")
-        ENDIF (NOT OpenMP_Fortran_FLAGS)
-    ENDIF (NOT OpenMP_Fortran_FLAGS)
+    # Find OpenMP: CMake's module sets OpenMP_Fortran_FLAGS and the target OpenMP::OpenMP_Fortran, which OSLO links
+    # (SetOSLO.cmake). A project that builds OSLO may have found it already
+    IF (NOT TARGET OpenMP::OpenMP_Fortran)
+        FIND_PACKAGE (OpenMP REQUIRED COMPONENTS Fortran)
+    ENDIF ()
 ENDIF()
 
 IF (USE_MPI)

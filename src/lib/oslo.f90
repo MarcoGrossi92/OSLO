@@ -222,6 +222,13 @@ contains
       run_odesolver => wrap_rodas
 
     case('ros2','ros3','ros4','rodas3','rodas4')
+#     if defined(FATODE_ROS_DISABLED)
+      ! Built by ifx with OpenMP they return wrong results from parallel regions (see CMakeLists.txt)
+      write(*,'(a)') trim(solver)//' is disabled in this build: built by ifx with OpenMP, FATODE''s Rosenbrock '// &
+                     'solvers can return wrong results from OpenMP parallel regions. H-rodas (Hairer''s RODAS, '// &
+                     'the method of rodas4) is not affected'
+      error stop 1
+#     endif
       allocate(IWORK_global(NNZERO+1))
       IWORK_global = 0
       IWORK_global(4) = Nsteps
@@ -254,15 +261,6 @@ contains
       if(solver=='sdirk4b')IWORK_global(3)=5
       run_odesolver => wrap_sdirk_FATODE
 
-#   if defined(INTEL)
-    case('dodesol')
-      LWORK = (7+2*n)*n
-      LIWORK = 128
-      allocate(IWORK_global(LIWORK))
-      IWORK_global = 0
-      run_odesolver => wrap_dodesol
-#   endif
-
 #   if defined(SUNDIALS)
     case('cvode')
       allocate(IWORK_global(1))
@@ -278,41 +276,6 @@ contains
     end select
 
   end subroutine setup_odesolver
-
-
-# if defined(INTEL)
-!> `jac`/`IJAC` are inert here: using them means switching from dodesol_mk52lfn
-!> to the analytic-Jacobian entry point dodesol_mk52lfa, a different call.
-recursive subroutine wrap_dodesol(n,t1,t2,var,fcn,jac,IJAC,ierr,hmax,solout)
-  use interface_definitions, only : solout_if, jac_if
-  implicit none
-  integer, intent(in)            :: n
-  real(R8), intent(inout)        :: t1, t2
-  real(R8), intent(inout)        :: var(n)
-  procedure(jac_if)              :: jac
-  integer, intent(in)            :: IJAC
-  integer, intent(out)           :: ierr
-  real(R8), intent(in), optional :: hmax
-  external :: fcn
-  procedure(solout_if), optional :: solout
-  ! specific
-  external :: dodesol_mk52lfn
-  real(R8) :: h
-  integer :: kd(n)
-  real(R8) :: hm, ep, tr
-  real(R8) :: dpar(LWORK)
-  integer :: ipar(LIWORK)
-  
-  h = 1.d-15
-  hm = 1.d-15
-  ep = minval(RTOL)
-  tr = minval(ATOL)
-  ipar = IWORK_global
-
-  call dodesol_mk52lfn(ipar,n,t1,t2,var,fcn,h,hm,ep,tr,dpar,kd,ierr)
-
-end subroutine wrap_dodesol
-# endif
 
 
 recursive subroutine wrap_sdirk4(n,t1,t2,var,fcn,jac,IJAC,IDID,hmax,solout)
@@ -459,7 +422,9 @@ recursive subroutine wrap_rodas(n,t1,t2,var,fcn,jac,IJAC,IDID,hmax,solout)
   integer :: IFCN, IDFX, IOUT
 
   h = 0.D0
-  IFCN = 0
+  ! fcn may depend on t: with IFCN=0 RODAS drops df/dt from its stages, which on a stiff non-autonomous problem makes
+  ! it fail. IDFX=0: df/dt by finite differences, one more call of fcn per step
+  IFCN = 1
   IDFX = 0
   IMAS = 0
   MLJAC = n

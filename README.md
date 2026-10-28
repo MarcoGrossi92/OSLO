@@ -20,7 +20,6 @@ OSLO is designed for **scientific computing and HPC environments**, bundling wel
 
   * Hairer & Wanner solvers for stiff and non-stiff problems
   * **FATODE** with automatic differentiation
-  * **Intel ODE** (Linux only, Intel compiler)
   * **SUNDIALS** (CVODE, IDA, etc.)
 
 * **Parallel Execution**
@@ -72,6 +71,12 @@ OSLO has been tested on the following configurations:
 | OpenSUSE Linux | Intel          | ✅      |
 
 The toolbox is expected to work on most Unix-like systems with a compatible Fortran compiler.
+
+**Known limitation: ifx with OpenMP.** Built by ifx (Intel) with OpenMP, FATODE's Rosenbrock solvers (`ros2`, `ros3`,
+`ros4`, `rodas3`, `rodas4`) returned wrong results, with a successful status, when called from OpenMP parallel regions.
+Until the cause is found, these builds disable them: `setup_odesolver` stops with an error for any of them. `H-rodas`
+(Hairer's RODAS, the method of `rodas4`) and the other solvers are not affected. Builds with gfortran, or with ifx
+without OpenMP, keep all the solvers.
 
 ---
 
@@ -127,6 +132,40 @@ make
 make install
 ```
 
+`-DOSLO_SUNDIALS_DIR=<folder>` installs SUNDIALS in `<folder>` instead of `sundials-install`. An installation is used
+as long as its stamp (`oslo-stamp.txt`: the SUNDIALS commit, the compilers and the flags) matches the build, and is
+rebuilt otherwise; the SUNDIALS sources (the submodule `lib/sundials`) are cloned only to build it.
+
+---
+
+## Testing
+
+A full build compiles the test programs in `bin/test/`; run them with `ctest`:
+
+```bash
+ctest --test-dir build --output-on-failure
+```
+
+Each program checks its results and stops with a nonzero exit status when one is wrong:
+
+| Test                  | What it checks                                                                                       |
+| --------------------- | ---------------------------------------------------------------------------------------------------- |
+| `OSLO.robertson`      | Every stiff solver on Robertson's problem, against reference values, up to t = 4e10; also with the analytical Jacobian (IJAC = 1) |
+| `OSLO.exact_solutions`| Every solver on problems with a known solution: Prothero-Robinson (stiff) and the harmonic oscillator |
+| `OSLO.options`        | `solout`, `hmax`, interrupting from `solout`, and the failure status when the step limit is reached   |
+| `OSLO.robertsonOMP`   | (with OpenMP) every solver from a parallel region on 4 threads: each result equal to the serial one   |
+| `OSLO.fatode_ros_disabled.*` | (ifx with OpenMP) `setup_odesolver` refuses each of FATODE's Rosenbrock solvers               |
+
+GitHub Actions (`.github/workflows/tests.yml`) builds OSLO and runs the suite on every pull request into `main`, in
+three configurations: gfortran with OpenMP and SUNDIALS, gfortran without either, and ifx with OpenMP and SUNDIALS.
+
+The pre-push hook in `.githooks/` runs the same suite on the build in `build/` and stops the push when a test fails.
+Activate it once per clone:
+
+```bash
+git config core.hooksPath .githooks
+```
+
 ---
 
 ## Usage
@@ -174,9 +213,6 @@ gfortran your_program.o -Lbuild/lib -lOSLO -o your_program
 * **SUNDIALS**  
   © Lawrence Livermore National Laboratory — BSD license  
   [https://computing.llnl.gov/projects/sundials](https://computing.llnl.gov/projects/sundials)
-
-* **Intel ODE**  
-  Intel-optimized ODE solvers (Linux only)
 
 ---
 
