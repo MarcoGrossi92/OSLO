@@ -316,7 +316,8 @@ recursive subroutine wrap_sdirk4(n,t1,t2,var,fcn,jac,IJAC,IDID,hmax,solout)
 
   IWORK = IWORK_global
   WORK = 0d0
-  WORK(1)=1.1d-19
+  !> The rounding unit of double precision: SDIRK4 perturbs a variable y by sqrt(WORK(1) max(1e-5,|y|)) for its Jacobian
+  WORK(1)=1.1d-16
   if (present(hmax)) WORK(7) = hmax
 
   if (present(solout)) then
